@@ -1183,6 +1183,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-list,
 #fornecedoresSection .rh-cand-list,
 .contagem-section .rh-cand-list,
+#lotesSection .rh-cand-list,
 #usuariosSection .rh-cand-list,
 #unidadesSection .rh-cand-list,
 #produtosSection .rh-cand-list,
@@ -1221,6 +1222,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-empty,
 #fornecedoresSection .rh-cand-empty,
 .contagem-section .rh-cand-empty,
+#lotesSection .rh-cand-empty,
 #usuariosSection .rh-cand-empty,
 #unidadesSection .rh-cand-empty,
 #produtosSection .rh-cand-empty,
@@ -1264,6 +1266,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 .contagem-section .rh-cand-card,
+#lotesSection .rh-cand-card,
 #usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
@@ -1305,6 +1308,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__top,
 #fornecedoresSection .rh-cand-card__top,
 .contagem-section .rh-cand-card__top,
+#lotesSection .rh-cand-card__top,
 #usuariosSection .rh-cand-card__top,
 #unidadesSection .rh-cand-card__top,
 #produtosSection .rh-cand-card__top,
@@ -1344,6 +1348,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__photo,
 #fornecedoresSection .rh-cand-card__photo,
 .contagem-section .rh-cand-card__photo,
+#lotesSection .rh-cand-card__photo,
 #usuariosSection .rh-cand-card__photo,
 #unidadesSection .rh-cand-card__photo,
 #produtosSection .rh-cand-card__photo,
@@ -1386,6 +1391,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__photo--wait,
 #fornecedoresSection .rh-cand-card__photo--wait,
 .contagem-section .rh-cand-card__photo--wait,
+#lotesSection .rh-cand-card__photo--wait,
 #usuariosSection .rh-cand-card__photo--wait,
 #unidadesSection .rh-cand-card__photo--wait,
 #produtosSection .rh-cand-card__photo--wait,
@@ -1429,6 +1435,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__main,
 #fornecedoresSection .rh-cand-card__main,
 .contagem-section .rh-cand-card__main,
+#lotesSection .rh-cand-card__main,
 #usuariosSection .rh-cand-card__main,
 #unidadesSection .rh-cand-card__main,
 #produtosSection .rh-cand-card__main,
@@ -1467,6 +1474,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__head,
 #fornecedoresSection .rh-cand-card__head,
 .contagem-section .rh-cand-card__head,
+#lotesSection .rh-cand-card__head,
 #usuariosSection .rh-cand-card__head,
 #unidadesSection .rh-cand-card__head,
 #produtosSection .rh-cand-card__head,
@@ -1507,6 +1515,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__name,
 #fornecedoresSection .rh-cand-card__name,
 .contagem-section .rh-cand-card__name,
+#lotesSection .rh-cand-card__name,
 #usuariosSection .rh-cand-card__name,
 #unidadesSection .rh-cand-card__name,
 #produtosSection .rh-cand-card__name,
@@ -1547,6 +1556,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__sub,
 #fornecedoresSection .rh-cand-card__sub,
 .contagem-section .rh-cand-card__sub,
+#lotesSection .rh-cand-card__sub,
 #usuariosSection .rh-cand-card__sub,
 #unidadesSection .rh-cand-card__sub,
 #produtosSection .rh-cand-card__sub,
@@ -1586,6 +1596,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__meta,
 #fornecedoresSection .rh-cand-card__meta,
 .contagem-section .rh-cand-card__meta,
+#lotesSection .rh-cand-card__meta,
 #usuariosSection .rh-cand-card__meta,
 #unidadesSection .rh-cand-card__meta,
 #produtosSection .rh-cand-card__meta,
@@ -1625,6 +1636,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row,
 #fornecedoresSection .rh-cand-card__row,
 .contagem-section .rh-cand-card__row,
+#lotesSection .rh-cand-card__row,
 #usuariosSection .rh-cand-card__row,
 #unidadesSection .rh-cand-card__row,
 #produtosSection .rh-cand-card__row,
@@ -1665,6 +1677,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row span,
 #fornecedoresSection .rh-cand-card__row span,
 .contagem-section .rh-cand-card__row span,
+#lotesSection .rh-cand-card__row span,
 #usuariosSection .rh-cand-card__row span,
 #unidadesSection .rh-cand-card__row span,
 #produtosSection .rh-cand-card__row span,
@@ -1703,6 +1716,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__row strong,
 #fornecedoresSection .rh-cand-card__row strong,
 .contagem-section .rh-cand-card__row strong,
+#lotesSection .rh-cand-card__row strong,
 #usuariosSection .rh-cand-card__row strong,
 #unidadesSection .rh-cand-card__row strong,
 #produtosSection .rh-cand-card__row strong,
@@ -1741,6 +1755,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__actions,
 #fornecedoresSection .rh-cand-card__actions,
 .contagem-section .rh-cand-card__actions,
+#lotesSection .rh-cand-card__actions,
 #usuariosSection .rh-cand-card__actions,
 #unidadesSection .rh-cand-card__actions,
 #produtosSection .rh-cand-card__actions,
@@ -1782,6 +1797,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__actions .rh-wa-btn,
 #fornecedoresSection .rh-cand-card__actions .rh-wa-btn,
 .contagem-section .rh-cand-card__actions .rh-wa-btn,
+#lotesSection .rh-cand-card__actions .rh-wa-btn,
 #usuariosSection .rh-cand-card__actions .rh-wa-btn,
 #unidadesSection .rh-cand-card__actions .rh-wa-btn,
 #produtosSection .rh-cand-card__actions .rh-wa-btn,
@@ -1820,6 +1836,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card .btn-rh-toggle,
 #fornecedoresSection .rh-cand-card .btn-rh-toggle,
 .contagem-section .rh-cand-card .btn-rh-toggle,
+#lotesSection .rh-cand-card .btn-rh-toggle,
 #usuariosSection .rh-cand-card .btn-rh-toggle,
 #unidadesSection .rh-cand-card .btn-rh-toggle,
 #produtosSection .rh-cand-card .btn-rh-toggle,
@@ -1859,6 +1876,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill,
 #fornecedoresSection .rh-cand-pill,
 .contagem-section .rh-cand-pill,
+#lotesSection .rh-cand-pill,
 #usuariosSection .rh-cand-pill,
 #unidadesSection .rh-cand-pill,
 #produtosSection .rh-cand-pill,
@@ -1903,6 +1921,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--ok,
 #fornecedoresSection .rh-cand-pill--ok,
 .contagem-section .rh-cand-pill--ok,
+#lotesSection .rh-cand-pill--ok,
 #usuariosSection .rh-cand-pill--ok,
 #unidadesSection .rh-cand-pill--ok,
 #produtosSection .rh-cand-pill--ok,
@@ -1937,6 +1956,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--warn,
 #fornecedoresSection .rh-cand-pill--warn,
 .contagem-section .rh-cand-pill--warn,
+#lotesSection .rh-cand-pill--warn,
 #usuariosSection .rh-cand-pill--warn,
 #unidadesSection .rh-cand-pill--warn,
 #produtosSection .rh-cand-pill--warn,
@@ -1971,6 +1991,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--danger,
 #fornecedoresSection .rh-cand-pill--danger,
 .contagem-section .rh-cand-pill--danger,
+#lotesSection .rh-cand-pill--danger,
 #usuariosSection .rh-cand-pill--danger,
 #unidadesSection .rh-cand-pill--danger,
 #produtosSection .rh-cand-pill--danger,
@@ -2005,6 +2026,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-pill--info,
 #fornecedoresSection .rh-cand-pill--info,
 .contagem-section .rh-cand-pill--info,
+#lotesSection .rh-cand-pill--info,
 #usuariosSection .rh-cand-pill--info,
 #unidadesSection .rh-cand-pill--info,
 #produtosSection .rh-cand-pill--info,
@@ -2230,6 +2252,7 @@ body.sidebar-open {
 #alvaraSection .rh-cand-card__details,
 #fornecedoresSection .rh-cand-card__details,
 .contagem-section .rh-cand-card__details,
+#lotesSection .rh-cand-card__details,
 #usuariosSection .rh-cand-card__details,
 #unidadesSection .rh-cand-card__details,
 #produtosSection .rh-cand-card__details,
@@ -2278,6 +2301,7 @@ body.sidebar-open {
   #alvaraSection .rh-cand-card__actions .btn,
   #fornecedoresSection .rh-cand-card__actions .btn,
   .contagem-section .rh-cand-card__actions .btn,
+  #lotesSection .rh-cand-card__actions .btn,
   #usuariosSection .rh-cand-card__actions .btn,
   #unidadesSection .rh-cand-card__actions .btn,
   #produtosSection .rh-cand-card__actions .btn,
@@ -11576,6 +11600,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 .contagem-section .rh-cand-card,
+#lotesSection .rh-cand-card,
 #usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
@@ -11632,6 +11657,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 .contagem-section .rh-cand-card,
+#lotesSection .rh-cand-card,
 #usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
@@ -11687,6 +11713,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 .contagem-section .rh-cand-card,
+#lotesSection .rh-cand-card,
 #usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
@@ -11747,6 +11774,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 .contagem-section .rh-cand-card,
+#lotesSection .rh-cand-card,
 #usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
@@ -11800,6 +11828,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 .contagem-section .rh-cand-card,
+#lotesSection .rh-cand-card,
 #usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
@@ -11852,6 +11881,7 @@ select[size]:not([size="1"]) {
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
 .contagem-section .rh-cand-card,
+#lotesSection .rh-cand-card,
 #usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
@@ -12250,6 +12280,43 @@ select[size]:not([size="1"]) {
   padding: 0 1rem 1rem;
 }
 #usuariosSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#lotesSection .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#lotesSection .filters-panel,
+#lotesSection .rh-cand-card {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#lotesSection .filters-panel {
+  border-radius: 16px;
+  margin-bottom: 1rem;
+}
+#lotesSection .rh-cand-card.lote-inativo {
+  opacity: 0.6;
+}
+#lotesSection .table-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+#lotesSection .table-card > header {
+  border-bottom: none;
+  background: transparent;
+}
+#lotesSection #lotesManageTable.rh-cand-list {
+  padding: 0 1rem 1rem;
+}
+#lotesSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

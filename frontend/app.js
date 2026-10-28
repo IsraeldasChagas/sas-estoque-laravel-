@@ -6439,11 +6439,11 @@ function renderLotesGerenciamento(lista) {
     // Formata a exibição dos dias - SEMPRE exibe algo se tiver valor
     if (diffDays !== null && Number.isFinite(diffDays) && !isNaN(diffDays)) {
       if (diffDays < 0) {
-        dias = `<span style="color: #f44336; font-weight: bold;">Vencido há ${Math.abs(diffDays)} dia(s)</span>`;
+        dias = `<span style="color: #b71c1c;">Vencido há ${Math.abs(diffDays)} dia(s)</span>`;
       } else if (diffDays === 0) {
-        dias = `<span style="color: #ff9800; font-weight: bold;">Vence hoje</span>`;
+        dias = `<span style="color: #e65100;">Vence hoje</span>`;
       } else if (diffDays <= 7) {
-        dias = `<span style="color: #ff9800; font-weight: bold;">${diffDays} dia(s)</span>`;
+        dias = `<span style="color: #e65100;">${diffDays} dia(s)</span>`;
       } else {
         dias = `${diffDays} dia(s)`;
       }
@@ -6453,15 +6453,13 @@ function renderLotesGerenciamento(lista) {
     }
     
     const podeImprimir = podeImprimirEtiqueta();
-    const acoes = [
-      '<div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">',
-      '<button class="table-action" data-action="edit">Editar</button>',
-      podeImprimir ? '<button class="table-action" data-action="etiqueta" title="Imprimir etiqueta">Etiqueta</button>' : '',
+    const botoes = [
+      '<button type="button" class="btn primary" data-action="edit">Editar</button>',
+      podeImprimir ? '<button type="button" class="btn neutral" data-action="etiqueta" title="Imprimir etiqueta">Etiqueta</button>' : "",
       ativo
-        ? '<button class="table-action danger" data-action="disable">Desativar</button>'
-        : '<button class="table-action" data-action="enable">Ativar</button>',
-      '<button class="table-action danger" data-action="delete">Excluir</button>',
-      '</div>',
+        ? '<button type="button" class="btn neutral" data-action="disable">Desativar</button>'
+        : '<button type="button" class="btn primary" data-action="enable">Ativar</button>',
+      '<button type="button" class="btn" data-action="delete" style="background:#b71c1c;color:#fff;">Excluir</button>',
     ].join("");
     
     // Status baseado em ativo e outras condições
@@ -6471,27 +6469,49 @@ function renderLotesGerenciamento(lista) {
         statusLabel = "Esgotado";
       } else if (lote.data_validade && lote.data_validade < new Date().toISOString().split('T')[0]) {
         statusLabel = "Vencido";
+      } else if (diffDays !== null && diffDays <= 7) {
+        statusLabel = "Vence em breve";
       }
     }
+    const pill = { Ativo: "ok", Inativo: "danger", Esgotado: "info", Vencido: "danger", "Vence em breve": "warn" }[statusLabel] || "info";
+    const codigo = lote.codigo_lote || lote.numero_lote || "—";
+    const valorTotal = (lote.quantidade ?? lote.qtd_atual ?? 0) * (lote.custo_unitario ?? 0);
+    const extras = [
+      lote.fornecedor ? `<div class="rh-cand-card__row"><span>Fornecedor</span><strong>${escapeHtml(lote.fornecedor)}</strong></div>` : "",
+      lote.nota_fiscal ? `<div class="rh-cand-card__row"><span>Nota fiscal</span><strong>${escapeHtml(lote.nota_fiscal)}</strong></div>` : "",
+      lote.localizacao ? `<div class="rh-cand-card__row"><span>Localização</span><strong>${escapeHtml(lote.localizacao)}</strong></div>` : "",
+    ].join("");
     
-    return `<tr data-id="${lote.id}">
-      <td data-label="Produto">${escapeHtml(lote.produto_nome || "--")}</td>
-      <td data-label="Unidade">${escapeHtml(lote.unidade_nome || "--")}</td>
-      <td data-label="Codigo">${escapeHtml(lote.codigo_lote || lote.numero_lote || "--")}</td>
-      <td data-label="Qtd">${quantidade}</td>
-      <td data-label="Validade">${validadeFormatada}</td>
-      <td data-label="Dias p/ vencer">${dias}</td>
-      <td data-label="Status">${buildStatusPill(statusLabel)}</td>
-      <td data-label="Valor total">R$ ${formatNumber((lote.quantidade ?? lote.qtd_atual ?? 0) * (lote.custo_unitario ?? 0), 2)}</td>
-      <td data-label="Acoes" class="table-actions">${acoes}</td>
-    </tr>`;
+    return `<article class="rh-cand-card${ativo ? "" : " lote-inativo"}" data-id="${lote.id}">
+      <div class="rh-cand-card__top">
+        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏷️</div>
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(lote.produto_nome || "Produto")}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(lote.unidade_nome || "Sem unidade")} · Lote ${escapeHtml(codigo)}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${pill}">${escapeHtml(statusLabel)}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>Quantidade</span><strong>${quantidade}</strong></div>
+            <div class="rh-cand-card__row"><span>Validade</span><strong>${escapeHtml(validadeFormatada)}</strong></div>
+            <div class="rh-cand-card__row"><span>Dias p/ vencer</span><strong>${dias}</strong></div>
+            <div class="rh-cand-card__row"><span>Custo unitário</span><strong>R$ ${formatNumber(lote.custo_unitario ?? 0, 2)}</strong></div>
+            <div class="rh-cand-card__row"><span>Valor total</span><strong>R$ ${formatNumber(valorTotal, 2)}</strong></div>
+            ${extras}
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">${botoes}</div>
+    </article>`;
   }).join("");
 
   if (!dom.lotesManageTable) {
     console.error("❌ dom.lotesManageTable não encontrado!");
     return;
   }
-  renderTable(dom.lotesManageTable, rows, "Nenhum lote para os filtros.", 9);
+  dom.lotesManageTable.innerHTML = rows || '<p class="rh-cand-empty">Nenhum lote para os filtros.</p>';
 }
 
 const CATEGORIA_PRODUTO_LABELS = {
@@ -14432,7 +14452,7 @@ function setupTables() {
   dom.lotesManageTable?.addEventListener("click", async (event) => {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
-    const row = button.closest("tr");
+    const row = button.closest("[data-id]");
     const id = row?.dataset.id;
     const lote = state.lotes?.find((item) => String(item.id) === String(id));
     if (!lote) return;

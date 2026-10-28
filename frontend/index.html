@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261028100000-contagem" />
+    <link rel="stylesheet" href="style.css?v=20261028102000-lotes" />
     <script>
       (function () {
         try {
@@ -799,7 +799,8 @@
 
           <!-- Gerenciamento de lotes com filtros e tabela -->
           <section id="lotesSection" class="view-section hidden">
-                          <div class="actions">
+            <div class="caixa-page-wrap">
+            <div class="actions hidden">
               <button class="btn primary hidden" id="openNovoLote" title="Criação manual desabilitada — lotes são gerados automaticamente em entradas de estoque">+ Novo lote</button>
             </div>
 
@@ -841,33 +842,16 @@
               </div>
               <div class="filters-actions">
                 <button type="submit" class="btn primary" id="aplicarFiltrosLotes">Aplicar filtros</button>
-                <button type="button" class="btn" id="limparFiltrosLotes">Limpar</button>
+                <button type="button" class="btn neutral" id="limparFiltrosLotes">Limpar</button>
               </div>
             </form>
 
             <div class="table-card form-card--wide">
               <header>Lotes cadastrados</header>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Produto</th>
-                      <th>Unidade</th>
-                      <th>Codigo</th>
-                      <th>Qtd</th>
-                      <th>Validade</th>
-                      <th>Dias p/ vencer</th>
-                      <th>Status</th>
-                      <th>Valor total</th>
-                    </tr>
-                  </thead>
-                  <tbody id="lotesManageTable">
-                    <tr>
-                      <td colspan="8" style="text-align: center; color: #607d8b">Use os filtros para carregar os lotes.</td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div class="rh-cand-list" id="lotesManageTable">
+                <p class="rh-cand-empty">Use os filtros para carregar os lotes.</p>
               </div>
+            </div>
             </div>
           </section>
 
@@ -8017,7 +8001,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261028100000-contagem"></script>
+    <script defer src="app.js?v=20261028102000-lotes"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
