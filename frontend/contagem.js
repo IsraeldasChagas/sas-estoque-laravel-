@@ -391,12 +391,35 @@
       <div class="contagem-checklist">${lista.length ? lista.map((p) => `<label><input type="checkbox" data-nova-prod="${p.id}"${n.produtos.has(p.id) ? " checked" : ""} /> ${esc(p.nome)} <small>${esc([p.codigo, categoriaLabel(p.categoria), unidadeMedida(p.unidade_base), p.na_unidade ? "" : "outra unidade"].filter(Boolean).join(" · "))}</small></label>`).join("") : vazio("Nenhum produto encontrado.")}</div>`;
   }
 
+  function funcaoLabel(perfil) {
+    const chave = String(perfil || "").trim().toUpperCase();
+    const mapa = typeof PERFIL_LABELS !== "undefined" ? PERFIL_LABELS : {};
+    return mapa[chave] || (chave ? chave.charAt(0) + chave.slice(1).toLowerCase().replace(/_/g, " ") : "Sem função");
+  }
+
   function htmlEquipeNova() {
     const n = st.nova;
     const termo = n.buscaEquipe.trim().toLowerCase();
     const eu = st.meta?.usuario_id;
-    const lista = (st.meta?.usuarios || []).filter((u) => !termo || String(u.nome).toLowerCase().includes(termo));
-    return `<div class="contagem-checklist">${lista.map((u) => `<label><input type="checkbox" data-nova-equipe="${u.id}"${u.id === eu || n.equipe.has(u.id) ? " checked" : ""}${u.id === eu ? " disabled" : ""} /> ${esc(u.nome)} <small>${esc(u.perfil || "")}${u.id === eu ? " · você" : ""}</small></label>`).join("")}</div>`;
+    const grupos = new Map();
+    (st.meta?.usuarios || [])
+      .filter((u) => !termo || `${u.nome} ${funcaoLabel(u.perfil)}`.toLowerCase().includes(termo))
+      .forEach((u) => {
+        const funcao = funcaoLabel(u.perfil);
+        if (!grupos.has(funcao)) grupos.set(funcao, []);
+        grupos.get(funcao).push(u);
+      });
+    if (!grupos.size) return vazio("Nenhum usuário encontrado.");
+    return `<div class="contagem-equipe">${[...grupos.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
+      .map(([funcao, usuarios]) => `<div class="contagem-equipe__grupo">
+        <p class="contagem-equipe__funcao">${esc(funcao)} <small>(${usuarios.length})</small></p>
+        ${usuarios
+          .sort((a, b) => String(a.nome).localeCompare(String(b.nome), "pt-BR"))
+          .map((u) => `<label class="contagem-equipe__usuario"><input type="checkbox" data-nova-equipe="${u.id}"${u.id === eu || n.equipe.has(u.id) ? " checked" : ""}${u.id === eu ? " disabled" : ""} /> ${esc(u.nome)}${u.id === eu ? " <small>· você</small>" : ""}</label>`)
+          .join("")}
+      </div>`)
+      .join("")}</div>`;
   }
 
   function renderNovaDinamico() {

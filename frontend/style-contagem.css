@@ -212,6 +212,47 @@
   font-weight: 500;
 }
 
+.contagem-equipe {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 0.75rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card-bg) 94%, #000);
+}
+
+.contagem-equipe__grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.contagem-equipe__funcao {
+  margin: 0;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--card-bg) 80%, #000);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.contagem-equipe__funcao small,
+.contagem-equipe__usuario small {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.contagem-equipe__usuario {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding-left: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .contagem-section .contagem-check {
   display: flex;
   align-items: center;
