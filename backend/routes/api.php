@@ -4021,7 +4021,8 @@ Route::post('/saida', function (Request $request) {
             'usuario_id' => 'required|integer|exists:usuarios,id',
             'forcar' => 'nullable|boolean',
             'codigo_lote' => 'nullable|string|max:255',
-            'unidade_informada' => 'nullable|string|in:UND,UN,UNID,G,KG,K,ML,L,KL',
+            'unidade_informada' => 'nullable|string|in:UND,UN,UNID,G,KG,K,ML,L,KL,CAIXA,SACO,FARDO,PACOTE,SACHE',
+            'fator_embalagem' => 'nullable|numeric|min:0.001|max:1000000',
             'motivo_detalhe' => 'nullable|string|max:2000',
             'setor_destino' => 'nullable|string|max:120',
             'numero_documento' => 'nullable|string|max:60',
@@ -4049,7 +4050,23 @@ Route::post('/saida', function (Request $request) {
         }
 
         $unidadeBaseProduto = normalizarUnidadeMedidaSaida($produto->unidade_base ?? 'UND');
-        if ($motivo === 'PRODUCAO') {
+        $embalagensSaida = ['CAIXA' => 'caixa', 'SACO' => 'saco', 'FARDO' => 'fardo', 'PACOTE' => 'pacote', 'SACHE' => 'sachê'];
+        $unidadeEmbalagem = strtoupper(trim((string) ($data['unidade_informada'] ?? '')));
+        if (isset($embalagensSaida[$unidadeEmbalagem])) {
+            $fatorEmbalagem = (float) ($data['fator_embalagem'] ?? 0);
+            if ($fatorEmbalagem <= 0) {
+                DB::rollBack();
+                return response()->json([
+                    'error' => 'Quantidade por embalagem',
+                    'message' => "Informe quanto vem em cada {$embalagensSaida[$unidadeEmbalagem]} ({$unidadeBaseProduto}).",
+                ], 422);
+            }
+            $unidadeInformada = $unidadeEmbalagem;
+            $quantidadeSolicitada = round($qtdInformada * $fatorEmbalagem, 3);
+            $fmt = fn ($v) => rtrim(rtrim(number_format((float) $v, 3, ',', '.'), '0'), ',');
+            $rotulo = $motivo === 'PRODUCAO' ? 'Produção' : 'Saída';
+            $notaProducao = "{$rotulo}: {$fmt($qtdInformada)} {$embalagensSaida[$unidadeEmbalagem]}(s) de {$fmt($fatorEmbalagem)} {$unidadeBaseProduto} = {$fmt($quantidadeSolicitada)} {$unidadeBaseProduto}";
+        } elseif ($motivo === 'PRODUCAO' || ! empty($data['unidade_informada'])) {
             $unidadeInformada = normalizarUnidadeMedidaSaida($data['unidade_informada'] ?? $unidadeBaseProduto);
             try {
                 $quantidadeSolicitada = converterQuantidadeParaUnidadeBaseSaida(
@@ -4066,9 +4083,10 @@ Route::post('/saida', function (Request $request) {
             }
             $qtdInformadaFmt = rtrim(rtrim(number_format($qtdInformada, 3, '.', ''), '0'), '.');
             $qtdConvertidaFmt = rtrim(rtrim(number_format($quantidadeSolicitada, 3, '.', ''), '0'), '.');
+            $rotulo = $motivo === 'PRODUCAO' ? 'Produção' : 'Saída';
             if ($unidadeInformada !== $unidadeBaseProduto || abs($qtdInformada - $quantidadeSolicitada) > 0.0005) {
-                $notaProducao = "Produção: informado {$qtdInformadaFmt} {$unidadeInformada} (estoque: {$qtdConvertidaFmt} {$unidadeBaseProduto})";
-            } else {
+                $notaProducao = "{$rotulo}: informado {$qtdInformadaFmt} {$unidadeInformada} (estoque: {$qtdConvertidaFmt} {$unidadeBaseProduto})";
+            } elseif ($motivo === 'PRODUCAO') {
                 $notaProducao = "Produção: {$qtdInformadaFmt} {$unidadeInformada}";
             }
         }

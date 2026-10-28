@@ -5790,8 +5790,21 @@
                 <option value="ML">Mililitros (ML)</option>
                 <option value="L">Litros (L)</option>
                 <option value="KL">Quilolitros (KL)</option>
+                <optgroup label="Embalagens">
+                  <option value="CAIXA">Caixa</option>
+                  <option value="SACO">Saco</option>
+                  <option value="FARDO">Fardo</option>
+                  <option value="PACOTE">Pacote</option>
+                  <option value="SACHE">Sachê</option>
+                </optgroup>
               </select>
             </label>
+            <div id="saidaEmbalagemWrapper" class="hidden">
+              <label>
+                <span id="saidaEmbalagemLabel">Cada caixa tem quanto?</span>
+                <input type="number" name="fator_embalagem" id="saidaFatorEmbalagem" step="0.001" min="0.001" inputmode="decimal" placeholder="Ex.: 12" />
+              </label>
+            </div>
             <p class="form-hint" id="saidaProducaoUnidadeHint" style="margin: 0 0 0.75rem; font-size: 0.85rem; color: var(--muted);">
               Informe a quantidade na unidade desejada. O sistema converte para a unidade base do produto ao baixar o estoque.
             </p>
@@ -8031,7 +8044,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261028144500-logo"></script>
+    <script defer src="app.js?v=20261028153000-embalagem"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

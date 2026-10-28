@@ -3621,43 +3621,92 @@ function converterQuantidadeParaUnidadeBase(qtd, deUnidade, paraUnidade) {
   throw new Error(`Não é possível converter ${de} para ${para}.`);
 }
 
+let saidaUnidadeBasePorProduto = new Map();
+const SAIDA_EMBALAGENS = { CAIXA: "caixa", SACO: "saco", FARDO: "fardo", PACOTE: "pacote", SACHE: "sachê" };
+const SAIDA_FATOR_KEY = "sas-saida-fator-embalagem";
+
+function unidadeBaseProdutoSaida() {
+  const produtoId = String(dom.saidaProdutoSelect?.value || "");
+  if (!produtoId) return null;
+  const doMapa = saidaUnidadeBasePorProduto.get(produtoId);
+  const produto = doMapa ? null : (state.produtos || []).find((p) => String(p.id) === produtoId);
+  const base = doMapa || produto?.unidade_base;
+  return base ? normalizarUnidadeMedida(base) : null;
+}
+
+function lerFatorSalvo(produtoId, embalagem) {
+  try {
+    return JSON.parse(localStorage.getItem(SAIDA_FATOR_KEY) || "{}")[`${produtoId}:${embalagem}`] || "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function salvarFator(produtoId, embalagem, fator) {
+  try {
+    const mapa = JSON.parse(localStorage.getItem(SAIDA_FATOR_KEY) || "{}");
+    mapa[`${produtoId}:${embalagem}`] = fator;
+    localStorage.setItem(SAIDA_FATOR_KEY, JSON.stringify(mapa));
+  } catch (_) {}
+}
+
+function atualizarEmbalagemSaida() {
+  const unidade = dom.saidaProducaoUnidadeSelect?.value || "";
+  const nomeEmbalagem = SAIDA_EMBALAGENS[unidade];
+  const wrapper = document.getElementById("saidaEmbalagemWrapper");
+  const fatorInput = document.getElementById("saidaFatorEmbalagem");
+  const hint = document.getElementById("saidaProducaoUnidadeHint");
+  const base = unidadeBaseProdutoSaida();
+  const baseTxt = base || "unidade base do produto";
+  wrapper?.classList.toggle("hidden", !nomeEmbalagem);
+  if (fatorInput) fatorInput.required = !!nomeEmbalagem;
+  if (!nomeEmbalagem) {
+    if (hint) {
+      hint.textContent = base
+        ? `Unidade base do produto: ${base}. Informe a quantidade na unidade desejada; o estoque será baixado após conversão.`
+        : "Informe a quantidade na unidade desejada. O sistema converte para a unidade base do produto ao baixar o estoque.";
+    }
+    return;
+  }
+  const label = document.getElementById("saidaEmbalagemLabel");
+  if (label) label.textContent = `Cada ${nomeEmbalagem} tem quanto? (em ${baseTxt})`;
+  const produtoId = dom.saidaProdutoSelect?.value || "";
+  if (fatorInput && !fatorInput.value && produtoId) fatorInput.value = lerFatorSalvo(produtoId, unidade);
+  const qtd = Number(document.getElementById("saidaQtdInput")?.value || 0);
+  const fator = Number(fatorInput?.value || 0);
+  const n = (v) => Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 3 });
+  if (hint) {
+    hint.textContent = qtd > 0 && fator > 0
+      ? `Serão baixados ${n(qtd * fator)} ${baseTxt} do estoque (${n(qtd)} ${nomeEmbalagem}(s) × ${n(fator)}).`
+      : `Informe quantas ${nomeEmbalagem}s saem e quanto vem em cada uma. O estoque é baixado em ${baseTxt}.`;
+  }
+}
+
 function updateSaidaDestinoVisibility() {
   const motivo = (dom.saidaMotivo?.value || "").toUpperCase();
   const isTransferencia = motivo === "TRANSFERENCIA";
-  const isProducao = motivo === "PRODUCAO";
   if (dom.saidaDestinoWrapper) dom.saidaDestinoWrapper.classList.toggle("hidden", !isTransferencia);
   if (!isTransferencia && dom.saidaDestinoSelect) {
     dom.saidaDestinoSelect.value = "";
   }
-  if (dom.saidaProducaoUnidadeWrapper) {
-    dom.saidaProducaoUnidadeWrapper.classList.toggle("hidden", !isProducao);
-  }
+  if (dom.saidaProducaoUnidadeWrapper) dom.saidaProducaoUnidadeWrapper.classList.remove("hidden");
   if (dom.saidaProducaoUnidadeSelect) {
-    dom.saidaProducaoUnidadeSelect.disabled = !isProducao;
-    dom.saidaProducaoUnidadeSelect.required = isProducao;
+    dom.saidaProducaoUnidadeSelect.disabled = false;
+    dom.saidaProducaoUnidadeSelect.required = false;
   }
-  if (isProducao) {
-    syncSaidaProducaoUnidadeComProduto();
-  } else if (dom.saidaProducaoUnidadeSelect) {
-    dom.saidaProducaoUnidadeSelect.value = "UND";
-  }
+  atualizarEmbalagemSaida();
 }
 
 function syncSaidaProducaoUnidadeComProduto() {
   if (!dom.saidaProducaoUnidadeSelect) return;
-  const produtoId = dom.saidaProdutoSelect?.value;
-  if (!produtoId) return;
-  const produto = (state.produtos || []).find((p) => String(p.id) === String(produtoId));
-  if (!produto) return;
-  const base = normalizarUnidadeMedida(produto.unidade_base);
+  const fatorInput = document.getElementById("saidaFatorEmbalagem");
+  if (fatorInput) fatorInput.value = "";
+  const base = unidadeBaseProdutoSaida();
   const opcoes = Array.from(dom.saidaProducaoUnidadeSelect.options).map((o) => o.value);
-  if (opcoes.includes(base)) {
+  if (base && opcoes.includes(base)) {
     dom.saidaProducaoUnidadeSelect.value = base;
   }
-  const hint = document.getElementById("saidaProducaoUnidadeHint");
-  if (hint) {
-    hint.textContent = `Unidade base do produto: ${base}. Informe a quantidade na unidade desejada; o estoque será baixado após conversão.`;
-  }
+  atualizarEmbalagemSaida();
 }
 
 /** Abre o modal de Registro de Saída pré-preenchido com dados do lote (QR code da etiqueta).
@@ -9991,6 +10040,7 @@ async function handleSaidaOrigemChange() {
       resetSaidaProdutoSelect("Nenhum produto com estoque disponivel");
       return;
     }
+    saidaUnidadeBasePorProduto = new Map(produtos.map((produto) => [String(produto.id), produto.unidade_base || ""]));
     const options = produtos
       .filter((produto) => Number(produto.ativo ?? 1) === 1)
       .map((produto) => `<option value="${produto.id}">${escapeHtml(produto.nome)}</option>`)
@@ -14246,28 +14296,37 @@ async function submitSaida(event) {
     showToast("Erro: Informe uma quantidade válida.", "error");
     return;
   }
-  if (data.motivo === "PRODUCAO") {
-    const unidadeInformada = normalizarUnidadeMedida(
-      dom.saidaProducaoUnidadeSelect?.value || data.unidade_informada || ""
-    );
-    if (!unidadeInformada) {
+  const unidadeEscolhida = (dom.saidaProducaoUnidadeSelect?.value || data.unidade_informada || "").toUpperCase();
+  const baseProdutoSaida = unidadeBaseProdutoSaida();
+  delete data.fator_embalagem;
+  if (SAIDA_EMBALAGENS[unidadeEscolhida]) {
+    const fator = Number(String(document.getElementById("saidaFatorEmbalagem")?.value || "").replace(",", "."));
+    if (!Number.isFinite(fator) || fator <= 0) {
       submittingSaida = false;
-      showToast("Erro: Selecione a unidade da quantidade para produção.", "error");
+      showToast(`Erro: Informe quanto vem em cada ${SAIDA_EMBALAGENS[unidadeEscolhida]}.`, "error");
+      document.getElementById("saidaFatorEmbalagem")?.focus();
       return;
     }
-    data.unidade_informada = unidadeInformada;
-    const produtoRef = (state.produtos || []).find((p) => String(p.id) === String(data.produto_id));
-    if (produtoRef?.unidade_base) {
-      try {
-        converterQuantidadeParaUnidadeBase(data.qtd, unidadeInformada, produtoRef.unidade_base);
-      } catch (convErr) {
-        submittingSaida = false;
-        showToast(convErr.message || "Unidade incompatível com o produto.", "error");
-        return;
+    data.unidade_informada = unidadeEscolhida;
+    data.fator_embalagem = fator;
+    salvarFator(data.produto_id, unidadeEscolhida, fator);
+  } else {
+    const unidadeInformada = normalizarUnidadeMedida(unidadeEscolhida);
+    const precisaConverter = data.motivo === "PRODUCAO" || (baseProdutoSaida && unidadeInformada !== baseProdutoSaida);
+    if (!precisaConverter) {
+      delete data.unidade_informada;
+    } else {
+      data.unidade_informada = unidadeInformada;
+      if (baseProdutoSaida) {
+        try {
+          converterQuantidadeParaUnidadeBase(data.qtd, unidadeInformada, baseProdutoSaida);
+        } catch (convErr) {
+          submittingSaida = false;
+          showToast(convErr.message || "Unidade incompatível com o produto.", "error");
+          return;
+        }
       }
     }
-  } else {
-    delete data.unidade_informada;
   }
   data.produto_id = Number(data.produto_id);
   if (!Number.isFinite(data.produto_id) || data.produto_id <= 0) {
@@ -26771,10 +26830,17 @@ function setupForms() {
   updateSaidaDestinoVisibility();
   resetSaidaProdutoSelect();
   dom.saidaMotivo?.addEventListener("change", updateSaidaDestinoVisibility);
+  dom.saidaProducaoUnidadeSelect?.addEventListener("change", () => {
+    const fatorInput = document.getElementById("saidaFatorEmbalagem");
+    if (fatorInput) fatorInput.value = "";
+    atualizarEmbalagemSaida();
+  });
+  document.getElementById("saidaFatorEmbalagem")?.addEventListener("input", atualizarEmbalagemSaida);
+  document.getElementById("saidaQtdInput")?.addEventListener("input", atualizarEmbalagemSaida);
   dom.saidaForm?.addEventListener("reset", () => {
-    updateSaidaDestinoVisibility();
-    resetSaidaProdutoSelect();
     if (dom.saidaProducaoUnidadeSelect) dom.saidaProducaoUnidadeSelect.value = "UND";
+    setTimeout(() => updateSaidaDestinoVisibility(), 0);
+    resetSaidaProdutoSelect();
     if (dom.saidaLoteWrapper) dom.saidaLoteWrapper.classList.add("hidden");
     if (dom.saidaLoteManualWrapper) dom.saidaLoteManualWrapper.classList.add("hidden");
     if (dom.saidaLoteManualInput) dom.saidaLoteManualInput.value = "";
