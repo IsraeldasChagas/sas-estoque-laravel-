@@ -1182,6 +1182,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-list,
 #alvaraSection .rh-cand-list,
 #fornecedoresSection .rh-cand-list,
+#usuariosSection .rh-cand-list,
 #unidadesSection .rh-cand-list,
 #produtosSection .rh-cand-list,
 #fechaTecnicaSection .rh-cand-list,
@@ -1218,6 +1219,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-empty,
 #alvaraSection .rh-cand-empty,
 #fornecedoresSection .rh-cand-empty,
+#usuariosSection .rh-cand-empty,
 #unidadesSection .rh-cand-empty,
 #produtosSection .rh-cand-empty,
 #fechaTecnicaSection .rh-cand-empty,
@@ -1259,6 +1261,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
+#usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
@@ -1298,6 +1301,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__top,
 #alvaraSection .rh-cand-card__top,
 #fornecedoresSection .rh-cand-card__top,
+#usuariosSection .rh-cand-card__top,
 #unidadesSection .rh-cand-card__top,
 #produtosSection .rh-cand-card__top,
 #fechaTecnicaSection .rh-cand-card__top,
@@ -1335,6 +1339,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__photo,
 #alvaraSection .rh-cand-card__photo,
 #fornecedoresSection .rh-cand-card__photo,
+#usuariosSection .rh-cand-card__photo,
 #unidadesSection .rh-cand-card__photo,
 #produtosSection .rh-cand-card__photo,
 #fechaTecnicaSection .rh-cand-card__photo,
@@ -1375,6 +1380,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__photo--wait,
 #alvaraSection .rh-cand-card__photo--wait,
 #fornecedoresSection .rh-cand-card__photo--wait,
+#usuariosSection .rh-cand-card__photo--wait,
 #unidadesSection .rh-cand-card__photo--wait,
 #produtosSection .rh-cand-card__photo--wait,
 #fechaTecnicaSection .rh-cand-card__photo--wait,
@@ -1416,6 +1422,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__main,
 #alvaraSection .rh-cand-card__main,
 #fornecedoresSection .rh-cand-card__main,
+#usuariosSection .rh-cand-card__main,
 #unidadesSection .rh-cand-card__main,
 #produtosSection .rh-cand-card__main,
 #fechaTecnicaSection .rh-cand-card__main,
@@ -1452,6 +1459,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__head,
 #alvaraSection .rh-cand-card__head,
 #fornecedoresSection .rh-cand-card__head,
+#usuariosSection .rh-cand-card__head,
 #unidadesSection .rh-cand-card__head,
 #produtosSection .rh-cand-card__head,
 #fechaTecnicaSection .rh-cand-card__head,
@@ -1490,6 +1498,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__name,
 #alvaraSection .rh-cand-card__name,
 #fornecedoresSection .rh-cand-card__name,
+#usuariosSection .rh-cand-card__name,
 #unidadesSection .rh-cand-card__name,
 #produtosSection .rh-cand-card__name,
 #fechaTecnicaSection .rh-cand-card__name,
@@ -1528,6 +1537,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__sub,
 #alvaraSection .rh-cand-card__sub,
 #fornecedoresSection .rh-cand-card__sub,
+#usuariosSection .rh-cand-card__sub,
 #unidadesSection .rh-cand-card__sub,
 #produtosSection .rh-cand-card__sub,
 #fechaTecnicaSection .rh-cand-card__sub,
@@ -1565,6 +1575,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__meta,
 #alvaraSection .rh-cand-card__meta,
 #fornecedoresSection .rh-cand-card__meta,
+#usuariosSection .rh-cand-card__meta,
 #unidadesSection .rh-cand-card__meta,
 #produtosSection .rh-cand-card__meta,
 #fechaTecnicaSection .rh-cand-card__meta,
@@ -1602,6 +1613,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__row,
 #alvaraSection .rh-cand-card__row,
 #fornecedoresSection .rh-cand-card__row,
+#usuariosSection .rh-cand-card__row,
 #unidadesSection .rh-cand-card__row,
 #produtosSection .rh-cand-card__row,
 #fechaTecnicaSection .rh-cand-card__row,
@@ -1640,6 +1652,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__row span,
 #alvaraSection .rh-cand-card__row span,
 #fornecedoresSection .rh-cand-card__row span,
+#usuariosSection .rh-cand-card__row span,
 #unidadesSection .rh-cand-card__row span,
 #produtosSection .rh-cand-card__row span,
 #fechaTecnicaSection .rh-cand-card__row span,
@@ -1676,6 +1689,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__row strong,
 #alvaraSection .rh-cand-card__row strong,
 #fornecedoresSection .rh-cand-card__row strong,
+#usuariosSection .rh-cand-card__row strong,
 #unidadesSection .rh-cand-card__row strong,
 #produtosSection .rh-cand-card__row strong,
 #fechaTecnicaSection .rh-cand-card__row strong,
@@ -1712,6 +1726,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__actions,
 #alvaraSection .rh-cand-card__actions,
 #fornecedoresSection .rh-cand-card__actions,
+#usuariosSection .rh-cand-card__actions,
 #unidadesSection .rh-cand-card__actions,
 #produtosSection .rh-cand-card__actions,
 #fechaTecnicaSection .rh-cand-card__actions,
@@ -1751,6 +1766,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__actions .rh-wa-btn,
 #alvaraSection .rh-cand-card__actions .rh-wa-btn,
 #fornecedoresSection .rh-cand-card__actions .rh-wa-btn,
+#usuariosSection .rh-cand-card__actions .rh-wa-btn,
 #unidadesSection .rh-cand-card__actions .rh-wa-btn,
 #produtosSection .rh-cand-card__actions .rh-wa-btn,
 #fechaTecnicaSection .rh-cand-card__actions .rh-wa-btn,
@@ -1787,6 +1803,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card .btn-rh-toggle,
 #alvaraSection .rh-cand-card .btn-rh-toggle,
 #fornecedoresSection .rh-cand-card .btn-rh-toggle,
+#usuariosSection .rh-cand-card .btn-rh-toggle,
 #unidadesSection .rh-cand-card .btn-rh-toggle,
 #produtosSection .rh-cand-card .btn-rh-toggle,
 #fechaTecnicaSection .rh-cand-card .btn-rh-toggle,
@@ -1824,6 +1841,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-pill,
 #alvaraSection .rh-cand-pill,
 #fornecedoresSection .rh-cand-pill,
+#usuariosSection .rh-cand-pill,
 #unidadesSection .rh-cand-pill,
 #produtosSection .rh-cand-pill,
 #fechaTecnicaSection .rh-cand-pill,
@@ -1866,6 +1884,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-pill--ok,
 #alvaraSection .rh-cand-pill--ok,
 #fornecedoresSection .rh-cand-pill--ok,
+#usuariosSection .rh-cand-pill--ok,
 #unidadesSection .rh-cand-pill--ok,
 #produtosSection .rh-cand-pill--ok,
 #fechaTecnicaSection .rh-cand-pill--ok,
@@ -1898,6 +1917,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-pill--warn,
 #alvaraSection .rh-cand-pill--warn,
 #fornecedoresSection .rh-cand-pill--warn,
+#usuariosSection .rh-cand-pill--warn,
 #unidadesSection .rh-cand-pill--warn,
 #produtosSection .rh-cand-pill--warn,
 #fechaTecnicaSection .rh-cand-pill--warn,
@@ -1930,6 +1950,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-pill--danger,
 #alvaraSection .rh-cand-pill--danger,
 #fornecedoresSection .rh-cand-pill--danger,
+#usuariosSection .rh-cand-pill--danger,
 #unidadesSection .rh-cand-pill--danger,
 #produtosSection .rh-cand-pill--danger,
 #fechaTecnicaSection .rh-cand-pill--danger,
@@ -1962,6 +1983,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-pill--info,
 #alvaraSection .rh-cand-pill--info,
 #fornecedoresSection .rh-cand-pill--info,
+#usuariosSection .rh-cand-pill--info,
 #unidadesSection .rh-cand-pill--info,
 #produtosSection .rh-cand-pill--info,
 #fechaTecnicaSection .rh-cand-pill--info,
@@ -2185,6 +2207,7 @@ body.sidebar-open {
 #impostosSection .rh-cand-card__details,
 #alvaraSection .rh-cand-card__details,
 #fornecedoresSection .rh-cand-card__details,
+#usuariosSection .rh-cand-card__details,
 #unidadesSection .rh-cand-card__details,
 #produtosSection .rh-cand-card__details,
 #fechaTecnicaSection .rh-cand-card__details,
@@ -2231,6 +2254,7 @@ body.sidebar-open {
   #impostosSection .rh-cand-card__actions .btn,
   #alvaraSection .rh-cand-card__actions .btn,
   #fornecedoresSection .rh-cand-card__actions .btn,
+  #usuariosSection .rh-cand-card__actions .btn,
   #unidadesSection .rh-cand-card__actions .btn,
   #produtosSection .rh-cand-card__actions .btn,
   #fechaTecnicaSection .rh-cand-card__actions .btn,
@@ -11527,6 +11551,7 @@ select[size]:not([size="1"]) {
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
+#usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
@@ -11581,6 +11606,7 @@ select[size]:not([size="1"]) {
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
+#usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
@@ -11634,6 +11660,7 @@ select[size]:not([size="1"]) {
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
+#usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
@@ -11692,6 +11719,7 @@ select[size]:not([size="1"]) {
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
+#usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
@@ -11743,6 +11771,7 @@ select[size]:not([size="1"]) {
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
+#usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
@@ -11793,6 +11822,7 @@ select[size]:not([size="1"]) {
 #impostosSection .rh-cand-card,
 #alvaraSection .rh-cand-card,
 #fornecedoresSection .rh-cand-card,
+#usuariosSection .rh-cand-card,
 #unidadesSection .rh-cand-card,
 #produtosSection .rh-cand-card,
 #fechaTecnicaSection .rh-cand-card,
@@ -12156,6 +12186,40 @@ select[size]:not([size="1"]) {
   padding: 0 1rem 1rem;
 }
 #unidadesSection .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#usuariosSection .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+}
+#usuariosSection .actions,
+#usuariosSection .rh-cand-card {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+#usuariosSection .actions {
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+#usuariosSection .table-card {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+}
+#usuariosSection .table-card > header {
+  border-bottom: none;
+  background: transparent;
+}
+#usuariosSection #usuariosTable.rh-cand-list {
+  padding: 0 1rem 1rem;
+}
+#usuariosSection .rh-cand-card__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

@@ -6913,47 +6913,60 @@ function closeUsuarioVerModal() {
 
 function renderUsuarios(lista) {
   const isAdminUser = isAdmin();
+  const target = dom.usuariosTable;
+  if (!target) return;
+  const items = lista || [];
+  if (!items.length) {
+    target.innerHTML = '<p class="rh-cand-empty">Nenhum usuario cadastrado.</p>';
+    return;
+  }
 
-  const usuariosAcoesHeaderEl = document.getElementById("usuariosAcoesHeader");
-  if (usuariosAcoesHeaderEl) usuariosAcoesHeaderEl.style.display = "";
-
-  const rows = (lista || []).map((usuario) => {
+  target.innerHTML = items.map((usuario) => {
     const ativo = Number(usuario.ativo) === 1;
     const fotoPath = usuario.foto || usuario.foto_path;
     const fotoUrl = getUsuarioFotoUrl(fotoPath);
     const foto = fotoUrl
-      ? `<img src="${fotoUrl}" alt="${escapeHtml(usuario.nome)}" class="usuarios-foto" loading="lazy" />`
-      : '<div class="usuarios-foto usuarios-foto--placeholder" aria-label="Sem foto"></div>';
+      ? `<img src="${fotoUrl}" alt="${escapeHtml(usuario.nome)}" class="usuarios-foto rh-cand-card__photo" loading="lazy" />`
+      : '<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo" aria-label="Sem foto"></div>';
 
     const podeGerenciar = usuarioPodeSerGerenciadoNaLista(usuario);
+    const perfilLabel = PERFIL_LABELS[(usuario.perfil || "").toString().trim().toUpperCase()] || usuario.perfil || "—";
+    const sub = [perfilLabel, usuario.unidade_nome].filter(Boolean).join(" · ");
 
-    const botoes = ['<button type="button" class="table-action" data-action="view">Ver</button>'];
+    const botoes = ['<button type="button" class="btn btn-rh-toggle" data-action="view">Ver</button>'];
     if (podeGerenciar) {
-      botoes.push('<button type="button" class="table-action" data-action="edit">Editar</button>');
+      botoes.push('<button type="button" class="btn primary" data-action="edit">Editar</button>');
       botoes.push(
         ativo
-          ? '<button type="button" class="table-action danger" data-action="disable">Desativar</button>'
-          : '<button type="button" class="table-action" data-action="enable">Ativar</button>'
+          ? '<button type="button" class="btn neutral" data-action="disable">Desativar</button>'
+          : '<button type="button" class="btn primary" data-action="enable">Ativar</button>'
       );
       if (isAdminUser) {
-        botoes.push('<button type="button" class="table-action danger" data-action="delete">Excluir</button>');
+        botoes.push('<button type="button" class="btn" data-action="delete" style="background:#b71c1c;color:#fff;">Excluir</button>');
       }
     }
 
-    const colunaAcoes = `<td data-label="Acoes" class="table-actions">${botoes.join("")}</td>`;
-
-    return `<tr data-id="${usuario.id}"${!ativo ? ' class="usuario-inativo"' : ''}>
-      <td data-label="Foto">${foto}</td>
-      <td data-label="Nome">${escapeHtml(usuario.nome)}</td>
-      <td data-label="Email">${escapeHtml(usuario.email)}</td>
-      <td data-label="Perfil">${escapeHtml(PERFIL_LABELS[(usuario.perfil || "").toString().trim().toUpperCase()] || (usuario.perfil || "--"))}</td>
-      <td data-label="Unidade">${escapeHtml(usuario.unidade_nome || "--")}</td>
-      <td data-label="Status"><span class="status-pill ${ativo ? "status-pill--active" : "status-pill--inactive"}">${ativo ? "Ativo" : "Inativo"}</span></td>
-      ${colunaAcoes}
-    </tr>`;
+    return `<article class="rh-cand-card${ativo ? "" : " usuario-inativo"}" data-id="${usuario.id}">
+      <div class="rh-cand-card__top">
+        ${foto}
+        <div class="rh-cand-card__main">
+          <div class="rh-cand-card__head">
+            <div>
+              <h3 class="rh-cand-card__name">${escapeHtml(usuario.nome || "—")}</h3>
+              <p class="rh-cand-card__sub">${escapeHtml(sub)}</p>
+            </div>
+            <span class="rh-cand-pill rh-cand-pill--${ativo ? "ok" : "danger"}">${ativo ? "Ativo" : "Inativo"}</span>
+          </div>
+          <div class="rh-cand-card__meta">
+            <div class="rh-cand-card__row"><span>E-mail</span><strong>${escapeHtml(usuario.email || "—")}</strong></div>
+            <div class="rh-cand-card__row"><span>Perfil</span><strong>${escapeHtml(perfilLabel)}</strong></div>
+            <div class="rh-cand-card__row"><span>Unidade</span><strong>${escapeHtml(usuario.unidade_nome || "—")}</strong></div>
+          </div>
+        </div>
+      </div>
+      <div class="rh-cand-card__actions">${botoes.join("")}</div>
+    </article>`;
   }).join("");
-
-  renderTable(dom.usuariosTable, rows, "Nenhum usuario cadastrado.", 7);
 }
 
 function renderRelatorioResumo(lista, label) {
@@ -13978,7 +13991,7 @@ async function handleUsuarioTableClick(event) {
   try {
     const button = event.target.closest("button[data-action]");
     if (!button) return;
-    const row = button.closest("tr");
+    const row = button.closest("[data-id]");
     const id = row?.dataset.id;
     if (!id) return;
     const usuario = state.usuarios.find((item) => String(item.id) === String(id));
@@ -14829,7 +14842,7 @@ function setupModals() {
     const id = document.getElementById("usuarioVerEditar")?.dataset?.id;
     if (!id) return;
     closeUsuarioVerModal();
-    dom.usuariosTable?.querySelector(`tr[data-id="${id}"]`)?.querySelector('button[data-action="edit"]')?.click();
+    dom.usuariosTable?.querySelector(`[data-id="${id}"]`)?.querySelector('button[data-action="edit"]')?.click();
   });
   dom.cancelUsuarioBtn?.addEventListener("click", () => toggleModal(dom.usuarioModal, false));
   document.getElementById("usuarioPermissoesPadrao")?.addEventListener("click", () => {

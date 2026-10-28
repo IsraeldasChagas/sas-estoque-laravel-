@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261025490000-dash" />
+    <link rel="stylesheet" href="style.css?v=20261028082500-usuarios" />
     <script>
       (function () {
         try {
@@ -1976,30 +1976,15 @@
 
           <!-- Administracao de usuarios do sistema -->
           <section id="usuariosSection" class="view-section hidden">
-                          <div class="actions">
-              <button class="btn primary" id="openUsuario">+ Novo usuario</button>
-            </div>
-            <div class="table-card">
-              <header>Usuarios cadastrados</header>
-              <div class="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Foto</th>
-                      <th>Nome</th>
-                      <th>Email</th>
-                      <th>Perfil</th>
-                      <th>Unidade</th>
-                      <th>Status</th>
-                      <th id="usuariosAcoesHeader">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody id="usuariosTable">
-                    <tr>
-                      <td colspan="7" style="text-align: center; color: #607d8b">Carregando...</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div class="caixa-page-wrap">
+              <div class="actions">
+                <button class="btn primary" id="openUsuario">+ Novo usuario</button>
+              </div>
+              <div class="table-card">
+                <header>Usuarios cadastrados</header>
+                <div class="rh-cand-list" id="usuariosTable">
+                  <p class="rh-cand-empty">Carregando...</p>
+                </div>
               </div>
             </div>
           </section>
@@ -7930,7 +7915,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261025490000-dash"></script>
+    <script defer src="app.js?v=20261028082500-usuarios"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
