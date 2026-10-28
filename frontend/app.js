@@ -13439,6 +13439,81 @@ async function submitProduto(event) {
   }
 }
 
+const unidadeLogoEstado = new WeakMap();
+
+function prepararLogoUnidadeForm(form, logoPath) {
+  if (!form) return;
+  const estado = { arquivo: null, remover: false, atual: logoPath || null };
+  unidadeLogoEstado.set(form, estado);
+  const input = form.querySelector("[data-logo-arquivo]");
+  if (input) input.value = "";
+  mostrarLogoUnidadeForm(form, logoPath ? getUsuarioFotoUrl(logoPath) : null);
+}
+
+function mostrarLogoUnidadeForm(form, url) {
+  const preview = form.querySelector("[data-logo-preview]");
+  if (preview) preview.innerHTML = url ? `<img src="${escapeHtml(url)}" alt="Logo da unidade" />` : "🏢";
+  form.querySelector("[data-logo-tirar]")?.classList.toggle("hidden", !url);
+}
+
+async function enviarLogoUnidade(unidadeId, arquivo) {
+  const fd = new FormData();
+  fd.append("logo", arquivo);
+  const res = await fetch(`${API_URL}/unidades/${unidadeId}/logo`, {
+    method: "POST",
+    headers: currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {},
+    body: fd,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.message || data.error || "Não foi possível salvar o logo.");
+  window.sasLimparCacheLogoUnidade?.(unidadeId);
+  return data;
+}
+
+async function aplicarLogoUnidadeForm(form, unidadeId) {
+  const estado = unidadeLogoEstado.get(form);
+  if (!estado || !unidadeId) return;
+  if (estado.arquivo) {
+    await enviarLogoUnidade(unidadeId, estado.arquivo);
+  } else if (estado.remover && estado.atual) {
+    await fetchJSON(`/unidades/${unidadeId}/logo`, { method: "DELETE" });
+    window.sasLimparCacheLogoUnidade?.(unidadeId);
+  }
+}
+
+document.addEventListener("change", (event) => {
+  const input = event.target.closest?.("[data-logo-arquivo]");
+  if (!input) return;
+  const form = input.closest("form");
+  const arquivo = input.files?.[0];
+  if (!form || !arquivo) return;
+  if (!/^image\/(png|jpe?g|webp)$/i.test(arquivo.type)) {
+    showToast("Envie uma imagem PNG, JPG ou WEBP.", "warning");
+    input.value = "";
+    return;
+  }
+  if (arquivo.size > 3 * 1024 * 1024) {
+    showToast("A imagem pode ter no máximo 3 MB.", "warning");
+    input.value = "";
+    return;
+  }
+  const estado = unidadeLogoEstado.get(form) || { atual: null };
+  unidadeLogoEstado.set(form, { ...estado, arquivo, remover: false });
+  mostrarLogoUnidadeForm(form, URL.createObjectURL(arquivo));
+});
+
+document.addEventListener("click", (event) => {
+  const btn = event.target.closest?.("[data-logo-tirar]");
+  if (!btn) return;
+  const form = btn.closest("form");
+  if (!form) return;
+  const estado = unidadeLogoEstado.get(form) || { atual: null };
+  unidadeLogoEstado.set(form, { ...estado, arquivo: null, remover: true });
+  const input = form.querySelector("[data-logo-arquivo]");
+  if (input) input.value = "";
+  mostrarLogoUnidadeForm(form, null);
+});
+
 async function submitUnidade(event, formOverride = null) {
   event.preventDefault();
   const form = formOverride || dom.unidadeForm;
@@ -13486,7 +13561,13 @@ async function submitUnidade(event, formOverride = null) {
   }
 
   try {
-    await fetchJSON(id ? `/unidades/${id}` : "/unidades", { method: id ? "PUT" : "POST", body: JSON.stringify(data) });
+    const salva = await fetchJSON(id ? `/unidades/${id}` : "/unidades", { method: id ? "PUT" : "POST", body: JSON.stringify(data) });
+    try {
+      await aplicarLogoUnidadeForm(form, id || salva?.id);
+    } catch (errLogo) {
+      showToast(`Unidade salva, mas o logo não: ${errLogo.message}`, "warning");
+    }
+    prepararLogoUnidadeForm(form, null);
     showToast("Unidade salva com sucesso!", "success");
     if (isModal) {
       toggleModal(dom.unidadeModal, false);
@@ -14616,6 +14697,7 @@ function setupTables() {
         dom.unidadeInlineForm.elements.observacoes.value = unidade.observacoes || "";
         const empSel = dom.unidadeInlineForm.elements.empresa_id;
         if (empSel) empSel.value = unidade.empresa_id != null ? String(unidade.empresa_id) : "";
+        prepararLogoUnidadeForm(dom.unidadeInlineForm, unidade.logo || null);
       }
       try {
         await loadUsuarios(true);
@@ -14656,17 +14738,8 @@ function setupTables() {
       input.addEventListener("change", async () => {
         const arquivo = input.files?.[0];
         if (!arquivo) return;
-        const fd = new FormData();
-        fd.append("logo", arquivo);
         try {
-          const res = await fetch(`${API_URL}/unidades/${unidade.id}/logo`, {
-            method: "POST",
-            headers: currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {},
-            body: fd,
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.message || data.error || "Não foi possível salvar o logo.");
-          window.sasLimparCacheLogoUnidade?.(unidade.id);
+          const data = await enviarLogoUnidade(unidade.id, arquivo);
           showToast(data.message || "Logo da unidade salvo.", "success");
           await loadUnidades();
         } catch (err) {
@@ -16634,6 +16707,7 @@ function setupModals() {
       dom.unidadeInlineForm.reset();
       if (dom.unidadeInlineForm.elements.id) dom.unidadeInlineForm.elements.id.value = "";
       if (dom.unidadeInlineForm.elements.ativo) dom.unidadeInlineForm.elements.ativo.value = "1";
+      prepararLogoUnidadeForm(dom.unidadeInlineForm, null);
     }
     try {
       await loadUsuarios();
@@ -16669,6 +16743,7 @@ function setupModals() {
   dom.cancelInlineUnidadeBtn?.addEventListener("click", () => {
     state.unidadeInlineVisivel = false;
     dom.unidadeInlineForm?.reset();
+    prepararLogoUnidadeForm(dom.unidadeInlineForm, null);
     if (dom.unidadeInlineForm?.elements.id) dom.unidadeInlineForm.elements.id.value = "";
     dom.unidadeInlineForm?.elements.nome?.blur();
     applyPermissions();

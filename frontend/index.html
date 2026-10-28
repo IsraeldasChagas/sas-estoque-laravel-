@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261028140000-cr" />
+    <link rel="stylesheet" href="style.css?v=20261028144500-logo" />
     <script>
       (function () {
         try {
@@ -1541,6 +1541,17 @@
                       </select>
                     </label>
                   </div>
+                    <div class="form-card__field full-width unidade-logo-campo">
+                      <span>Logo da unidade</span>
+                      <div class="unidade-logo-campo__linha">
+                        <div class="unidade-logo-campo__preview" data-logo-preview aria-hidden="true">🏢</div>
+                        <div class="unidade-logo-campo__acoes">
+                          <label class="btn neutral unidade-logo-campo__escolher">Escolher logo<input type="file" accept="image/png,image/jpeg,image/webp" data-logo-arquivo hidden /></label>
+                          <button type="button" class="btn neutral hidden" data-logo-tirar>Tirar logo</button>
+                          <small class="subtle-text">PNG ou JPG, até 3 MB. Aparece no PDF e no WhatsApp da lista de compras.</small>
+                        </div>
+                      </div>
+                    </div>
                     <label class="form-card__field full-width">
                       Observacoes
                       <textarea name="observacoes" rows="3" placeholder="Observacoes internas, horarios, restricoes..."></textarea>
@@ -6237,12 +6248,23 @@
             Email
             <input type="email" name="email" />
           </label>
+          <div class="unidade-logo-campo">
+            <span>Logo da unidade</span>
+            <div class="unidade-logo-campo__linha">
+              <div class="unidade-logo-campo__preview" data-logo-preview aria-hidden="true">🏢</div>
+              <div class="unidade-logo-campo__acoes">
+                <label class="btn neutral unidade-logo-campo__escolher">Escolher logo<input type="file" accept="image/png,image/jpeg,image/webp" data-logo-arquivo hidden /></label>
+                <button type="button" class="btn neutral hidden" data-logo-tirar>Tirar logo</button>
+                <small class="subtle-text">PNG ou JPG, até 3 MB. Aparece no PDF e no WhatsApp da lista de compras.</small>
+              </div>
+            </div>
+          </div>
           <label>
             Observacoes
             <textarea name="observacoes" rows="3"></textarea>
           </label>
           <footer>
-            <button type="button" class="btn" id="cancelUnidade">Limpar</button>
+            <button type="button" class="btn neutral" id="cancelUnidade">Limpar</button>
             <button type="submit" class="btn primary">Salvar</button>
           </footer>
         </form>
@@ -8009,7 +8031,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261028140000-cr"></script>
+    <script defer src="app.js?v=20261028144500-logo"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
