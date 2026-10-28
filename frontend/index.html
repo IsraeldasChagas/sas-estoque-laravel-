@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261028144500-logo" />
+    <link rel="stylesheet" href="style.css?v=20261028154000-buscaUsuarios" />
     <script>
       (function () {
         try {
@@ -1994,6 +1994,21 @@
             <div class="caixa-page-wrap">
               <div class="actions">
                 <button class="btn primary" id="openUsuario">+ Novo usuario</button>
+                <input
+                  type="search"
+                  id="usuariosBusca"
+                  class="usuarios-busca"
+                  placeholder="Pesquisar por nome, e-mail, perfil ou unidade..."
+                  autocomplete="off"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  spellcheck="false"
+                  data-lpignore="true"
+                  data-1p-ignore="true"
+                  data-form-type="other"
+                  aria-label="Pesquisar usuários"
+                />
+                <span class="usuarios-busca-total subtle-text" id="usuariosBuscaTotal" aria-live="polite"></span>
               </div>
               <div class="table-card">
                 <header>Usuarios cadastrados</header>
@@ -8044,7 +8059,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261028153000-embalagem"></script>
+    <script defer src="app.js?v=20261028154000-buscaUsuarios"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

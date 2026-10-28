@@ -12358,6 +12358,32 @@ select[size]:not([size="1"]) {
 #usuariosSection .actions {
   padding: 8px 10px;
   border-radius: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+#usuariosSection .actions > .btn {
+  align-self: center;
+}
+#usuariosSection .usuarios-busca {
+  flex: 1 1 260px;
+  max-width: 440px;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+  color: var(--text);
+  font: inherit;
+}
+#usuariosSection .usuarios-busca-total {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+@media (max-width: 640px) {
+  #usuariosSection .usuarios-busca {
+    max-width: none;
+    flex-basis: 100%;
+  }
 }
 #usuariosSection .table-card {
   border: none;

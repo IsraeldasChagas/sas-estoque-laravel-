@@ -7302,13 +7302,41 @@ function closeUsuarioVerModal() {
   toggleModal(document.getElementById("usuarioVerModal"), false);
 }
 
+function textoBuscaUsuario(valor) {
+  return String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+function filtrarUsuariosPorBusca(lista) {
+  const termo = textoBuscaUsuario(document.getElementById("usuariosBusca")?.value);
+  if (!termo) return lista;
+  const palavras = termo.split(/\s+/);
+  return lista.filter((usuario) => {
+    const perfil = (usuario.perfil || "").toString().trim().toUpperCase();
+    const alvo = textoBuscaUsuario([
+      usuario.nome,
+      usuario.email,
+      perfil,
+      PERFIL_LABELS[perfil],
+      usuario.unidade_nome,
+      Number(usuario.ativo) === 1 ? "ativo" : "inativo",
+    ].join(" "));
+    return palavras.every((p) => alvo.includes(p));
+  });
+}
+
 function renderUsuarios(lista) {
   const isAdminUser = isAdmin();
   const target = dom.usuariosTable;
   if (!target) return;
-  const items = lista || [];
+  const todos = lista || [];
+  const items = filtrarUsuariosPorBusca(todos);
+  const busca = (document.getElementById("usuariosBusca")?.value || "").trim();
+  const totalEl = document.getElementById("usuariosBuscaTotal");
+  if (totalEl) totalEl.textContent = busca ? `${items.length} de ${todos.length} usuário(s)` : "";
   if (!items.length) {
-    target.innerHTML = '<p class="rh-cand-empty">Nenhum usuario cadastrado.</p>';
+    target.innerHTML = busca
+      ? `<p class="rh-cand-empty">Nenhum usuário encontrado para "${escapeHtml(busca)}".</p>`
+      : '<p class="rh-cand-empty">Nenhum usuario cadastrado.</p>';
     return;
   }
 
@@ -14911,6 +14939,12 @@ function setupTables() {
   });
 
   dom.usuariosTable?.addEventListener("click", handleUsuarioTableClick);
+  const usuariosBuscaEl = document.getElementById("usuariosBusca");
+  if (usuariosBuscaEl && !usuariosBuscaEl.dataset.bound) {
+    usuariosBuscaEl.dataset.bound = "1";
+    if (typeof setupSearchInputAntiAutofill === "function") setupSearchInputAntiAutofill(usuariosBuscaEl);
+    usuariosBuscaEl.addEventListener("input", () => renderUsuarios(state.usuarios));
+  }
 
   dom.listasComprasTable?.addEventListener("click", async (event) => {
     const btnExcluir = event.target.closest("button[data-action='delete-lista']");
