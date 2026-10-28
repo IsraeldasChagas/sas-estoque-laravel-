@@ -496,12 +496,15 @@
         <h3 class="rh-cand-card__name">${st.editando ? "Editar lista" : "Nova lista"}</h3>
         <label>Nome da lista<input type="text" id="crNome" maxlength="160" value="${esc(st.nome)}" placeholder="Ex.: Feira de sábado" /></label>
         <div class="cr-grid">
-          <label>Produto<input type="text" id="crProduto" list="crProdutosLista" autocomplete="off" value="${esc(st.novo.produto)}" placeholder="Digite ou escolha" /></label>
+          <div class="cr-produto-campo">
+            <label for="crProduto">Produto</label>
+            <input type="text" id="crProduto" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="crSugestoes" aria-expanded="false" value="${esc(st.novo.produto)}" placeholder="Digite para buscar ou escreva um novo" />
+            <ul class="cr-sugestoes hidden" id="crSugestoes" role="listbox"></ul>
+          </div>
           <label>Quantidade<input type="text" id="crQuantidade" inputmode="decimal" value="${esc(st.novo.quantidade)}" /></label>
           <label>Tipo<select id="crTipo">${tiposOpts}</select></label>
           <label>Observação<input type="text" id="crObservacao" maxlength="255" value="${esc(st.novo.observacao)}" placeholder="Opcional" /></label>
         </div>
-        <datalist id="crProdutosLista">${(st.meta.produtos || []).map((p) => `<option value="${esc(p.nome)}"></option>`).join("")}</datalist>
         <div class="rh-cand-card__actions"><button type="button" class="btn primary" id="crAdicionar">Adicionar produto</button></div>
         <div class="rh-cand-list cr-rascunho" id="crRascunho">${htmlRascunho()}</div>
         <div class="rh-cand-card__actions">
@@ -524,8 +527,8 @@
     const qtd = Number(String(st.novo.quantidade).replace(",", "."));
     if (!nome) return toast("Informe o produto.", "warning");
     if (!Number.isFinite(qtd) || qtd <= 0) return toast("Informe a quantidade.", "warning");
-    const cadastrado = (st.meta.produtos || []).find((p) => p.nome.toLowerCase() === nome.toLowerCase());
-    st.rascunho.push({ produto_id: cadastrado?.id || null, produto_nome: nome, quantidade: qtd, tipo: st.novo.tipo, observacao: st.novo.observacao.trim() });
+    const cadastrado = (st.meta.produtos || []).find((p) => semAcento(p.nome) === semAcento(nome));
+    st.rascunho.push({ produto_id: st.novo.produtoId || cadastrado?.id || null, produto_nome: nome, quantidade: qtd, tipo: st.novo.tipo, observacao: st.novo.observacao.trim() });
     st.novo = { produto: "", produtoId: null, quantidade: "", tipo: "UN", observacao: "" };
     render();
     $("crProduto")?.focus();
@@ -550,19 +553,94 @@
     render();
   }
 
+  const semAcento = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const sugestoes = { itens: [], ativo: -1 };
+
+  function buscarProdutos(termo) {
+    const t = semAcento(termo);
+    if (!t) return [];
+    const palavras = t.split(/\s+/);
+    return (st.meta.produtos || [])
+      .map((p) => ({ p, nome: semAcento(p.nome) }))
+      .filter(({ nome }) => palavras.every((w) => nome.includes(w)))
+      .sort((a, b) => Number(!a.nome.startsWith(t)) - Number(!b.nome.startsWith(t)) || a.nome.localeCompare(b.nome))
+      .slice(0, 8)
+      .map(({ p }) => p);
+  }
+
+  function destacar(nome, termo) {
+    const t = semAcento(termo);
+    const i = t ? semAcento(nome).indexOf(t) : -1;
+    if (i < 0) return esc(nome);
+    return `${esc(nome.slice(0, i))}<strong>${esc(nome.slice(i, i + t.length))}</strong>${esc(nome.slice(i + t.length))}`;
+  }
+
+  function mostrarSugestoes(termo) {
+    const ul = $("crSugestoes");
+    const input = $("crProduto");
+    if (!ul || !input) return;
+    sugestoes.itens = buscarProdutos(termo);
+    sugestoes.ativo = -1;
+    if (!sugestoes.itens.length) {
+      esconderSugestoes();
+      return;
+    }
+    ul.innerHTML = sugestoes.itens
+      .map((p, i) => `<li role="option" id="crSug${i}" data-cr-sug="${i}">${destacar(p.nome, termo)}${p.unidade_base ? ` <small>${esc(tipoSigla(TIPO_POR_UNIDADE_BASE[String(p.unidade_base).toUpperCase()] || p.unidade_base))}</small>` : ""}</li>`)
+      .join("");
+    ul.classList.remove("hidden");
+    input.setAttribute("aria-expanded", "true");
+  }
+
+  function esconderSugestoes() {
+    const ul = $("crSugestoes");
+    if (ul) {
+      ul.classList.add("hidden");
+      ul.innerHTML = "";
+    }
+    $("crProduto")?.setAttribute("aria-expanded", "false");
+    sugestoes.itens = [];
+    sugestoes.ativo = -1;
+  }
+
+  function marcarSugestao(indice) {
+    const ul = $("crSugestoes");
+    if (!ul || !sugestoes.itens.length) return;
+    sugestoes.ativo = (indice + sugestoes.itens.length) % sugestoes.itens.length;
+    ul.querySelectorAll("[data-cr-sug]").forEach((li, i) => li.classList.toggle("ativo", i === sugestoes.ativo));
+    ul.querySelector(".ativo")?.scrollIntoView({ block: "nearest" });
+    $("crProduto")?.setAttribute("aria-activedescendant", `crSug${sugestoes.ativo}`);
+  }
+
+  function aplicarTipoDoProduto(p) {
+    const tipo = p ? TIPO_POR_UNIDADE_BASE[String(p.unidade_base || "").toUpperCase()] : null;
+    if (!tipo) return;
+    st.novo.tipo = tipo;
+    const sel = $("crTipo");
+    if (sel) sel.value = tipo;
+  }
+
+  function escolherSugestao(indice) {
+    const p = sugestoes.itens[indice];
+    if (!p) return;
+    st.novo.produto = p.nome;
+    st.novo.produtoId = p.id;
+    const input = $("crProduto");
+    if (input) input.value = p.nome;
+    aplicarTipoDoProduto(p);
+    esconderSugestoes();
+    $("crQuantidade")?.focus();
+  }
+
   function ligarEventos(wrap) {
     wrap.addEventListener("input", (ev) => {
       const el = ev.target;
       if (el.id === "crNome") st.nome = el.value;
       else if (el.id === "crProduto") {
         st.novo.produto = el.value;
-        const p = (st.meta.produtos || []).find((x) => x.nome.toLowerCase() === el.value.trim().toLowerCase());
-        const tipo = p ? TIPO_POR_UNIDADE_BASE[String(p.unidade_base || "").toUpperCase()] : null;
-        if (tipo) {
-          st.novo.tipo = tipo;
-          const sel = $("crTipo");
-          if (sel) sel.value = tipo;
-        }
+        st.novo.produtoId = null;
+        aplicarTipoDoProduto((st.meta.produtos || []).find((x) => semAcento(x.nome) === semAcento(el.value)));
+        mostrarSugestoes(el.value);
       } else if (el.id === "crQuantidade") st.novo.quantidade = el.value;
       else if (el.id === "crObservacao") st.novo.observacao = el.value;
     });
@@ -579,10 +657,38 @@
       }
     });
     wrap.addEventListener("keydown", (ev) => {
+      const abertas = ev.target.id === "crProduto" && sugestoes.itens.length > 0;
+      if (abertas && (ev.key === "ArrowDown" || ev.key === "ArrowUp")) {
+        ev.preventDefault();
+        marcarSugestao(sugestoes.ativo + (ev.key === "ArrowDown" ? 1 : -1));
+        return;
+      }
+      if (abertas && ev.key === "Escape") {
+        esconderSugestoes();
+        return;
+      }
+      if (abertas && (ev.key === "Enter" || ev.key === "Tab") && sugestoes.ativo >= 0) {
+        ev.preventDefault();
+        escolherSugestao(sugestoes.ativo);
+        return;
+      }
       if (ev.key === "Enter" && ["crProduto", "crQuantidade", "crObservacao"].includes(ev.target.id)) {
         ev.preventDefault();
+        esconderSugestoes();
         adicionarItem();
       }
+    });
+    wrap.addEventListener("pointerdown", (ev) => {
+      const li = ev.target.closest("[data-cr-sug]");
+      if (!li) return;
+      ev.preventDefault();
+      escolherSugestao(Number(li.dataset.crSug));
+    });
+    wrap.addEventListener("focusout", (ev) => {
+      if (ev.target.id === "crProduto") setTimeout(esconderSugestoes, 120);
+    });
+    wrap.addEventListener("focusin", (ev) => {
+      if (ev.target.id === "crProduto" && ev.target.value.trim()) mostrarSugestoes(ev.target.value);
     });
     wrap.addEventListener("click", async (ev) => {
       const t = ev.target;

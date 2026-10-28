@@ -117,6 +117,55 @@
   gap: 0.6rem 1rem;
 }
 
+#comprasRapidasSection .cr-produto-campo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+#comprasRapidasSection .cr-produto-campo > label {
+  display: block;
+}
+
+#comprasRapidasSection .cr-sugestoes {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--card-bg, #fff);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+#comprasRapidasSection .cr-sugestoes li {
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 500;
+}
+
+#comprasRapidasSection .cr-sugestoes li strong {
+  font-weight: 800;
+}
+
+#comprasRapidasSection .cr-sugestoes li small {
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+#comprasRapidasSection .cr-sugestoes li:hover,
+#comprasRapidasSection .cr-sugestoes li.ativo {
+  background: color-mix(in srgb, var(--primary, #0d47a1) 14%, transparent);
+}
+
 #comprasRapidasSection .cr-rascunho {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
