@@ -509,7 +509,7 @@
         <div class="rh-cand-list cr-rascunho" id="crRascunho">${htmlRascunho()}</div>
         <div class="rh-cand-card__actions">
           <button type="button" class="btn primary" id="crSalvar">${st.editando ? "Salvar alterações" : "Salvar lista"}</button>
-          ${st.editando ? '<button type="button" class="btn neutral" id="crCancelar">Cancelar</button>' : ""}
+          <button type="button" class="btn neutral" id="crCancelar">Cancelar</button>
         </div>
       </article>
       <div class="cr-listas-head">
@@ -695,6 +695,9 @@
       if (t.closest("#crAdicionar")) return adicionarItem();
       if (t.closest("#crSalvar")) return salvar();
       if (t.closest("#crCancelar")) {
+        const temDados = st.nome.trim() || st.rascunho.length || st.novo.produto.trim();
+        const pergunta = st.editando ? "Descartar as alterações desta lista?" : "Descartar esta lista? Os produtos adicionados serão apagados.";
+        if (temDados && !confirm(pergunta)) return;
         limparFormulario();
         return render();
       }
