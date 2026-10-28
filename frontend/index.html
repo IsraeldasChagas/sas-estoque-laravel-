@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261028102000-lotes" />
+    <link rel="stylesheet" href="style.css?v=20261028140000-cr" />
     <script>
       (function () {
         try {
@@ -70,6 +70,7 @@
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-orcamentos.css?v=20260717-proto3" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-contagem.css?v=20261028101000-equipe" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="style-compras-rapidas.css?v=20261028140000-cr" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" media="print" onload="this.media='all'" />
   </head>
   <body>
@@ -194,6 +195,7 @@
           <a href="#" class="nav-link" data-section="locais"><span class="nav-icon" aria-hidden="true">📍</span><span class="nav-label">Locais</span></a>
           <a href="#" class="nav-link" data-section="movimentacoes"><span class="nav-icon" aria-hidden="true">🔄</span><span class="nav-label">Movimentacoes</span></a>
           <a href="#" class="nav-link" data-section="compras"><span class="nav-icon" aria-hidden="true">🛒</span><span class="nav-label">Lista de Compras</span></a>
+          <a href="#" class="nav-link" data-section="comprasRapidas"><span class="nav-icon" aria-hidden="true">🧾</span><span class="nav-label">Lista de compras rápida</span></a>
           <div class="nav-submenu nav-submenu--contagem">
             <a href="#" class="nav-link nav-link-parent" id="contagemMenu">
               <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Contagem de estoque</span></span>
@@ -771,6 +773,7 @@
                     <button type="button" class="btn danger" id="listaCompraFinalizar">Finalizar</button>
                     <button type="button" class="btn primary" id="listaCompraGerarPdf" disabled>Gerar PDF</button>
                     <button type="button" class="btn neutral" id="listaCompraPdf" disabled>Abrir PDF</button>
+                    <button type="button" class="btn rh-wa-btn rh-wa-btn--mini" id="listaCompraWhatsapp" disabled>WhatsApp</button>
                     <button type="button" class="btn primary" id="listaCompraLancarEstoque" disabled>Lancar no Estoque</button>
                   </div>
                   <section>
@@ -5555,6 +5558,7 @@
         <section id="fidelidadeHistoricoSection" class="view-section hidden"><div id="fidelidadeHistoricoRoot" class="orc-root"></div></section>
         <section id="fidelidadeRecompensasSection" class="view-section hidden"><div id="fidelidadeRecompensasRoot" class="orc-root"></div></section>
         <section id="fidelidadeRelatoriosSection" class="view-section hidden"><div id="fidelidadeRelatoriosRoot" class="orc-root"></div></section>
+        <section id="comprasRapidasSection" class="view-section hidden"><div id="comprasRapidasRoot"></div></section>
         <section id="contagemDashboardSection" class="view-section hidden contagem-section"><div id="contagemDashboardRoot"></div></section>
         <section id="contagemNovaSection" class="view-section hidden contagem-section"><div id="contagemNovaRoot"></div></section>
         <section id="contagemRealizarSection" class="view-section hidden contagem-section"><div id="contagemRealizarRoot"></div></section>
@@ -6345,6 +6349,7 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="locais" /> Locais</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="movimentacoes" /> Movimentações</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="compras" /> Lista de Compras</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="comprasRapidas" /> Lista de compras rápida</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="relatorios" /> Relatórios</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fornecedores" /> Fornecedores</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: Reservas</strong></div>
@@ -7988,6 +7993,7 @@
     <script defer src="orcamentos.js?v=20260717-functional1"></script>
     <script defer src="fidelidade.js?v=20260720-selo-minimo"></script>
     <script defer src="contagem.js?v=20261028101000-equipe"></script>
+    <script defer src="compras-rapidas.js?v=20261028140000-cr"></script>
     <script defer src="pwa.js?v=20261015-pwa"></script>
     <script>
       (function () {
@@ -8003,7 +8009,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261028102000-lotes"></script>
+    <script defer src="app.js?v=20261028140000-cr"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

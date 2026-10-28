@@ -1666,7 +1666,7 @@ const CONTAGEM_LOADERS = {
 };
 const ALL_NAV_SECTION_IDS = new Set([
   "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
-  "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
+  "estoque", "lotes", "locais", "movimentacoes", "compras", "comprasRapidas", "relatorios", "fornecedores",
   "boletao", "impostos", "alvara", "proventos", "despesasFixas", "valeConsumo", "reciboAjuda", "fechamento", "fechamentoDash",
   "financeiroDashboard", "financeiroFluxoCaixa", "financeiroContasReceber", "financeiroDre", "financeiroCmv",
   "financeiroCentrosCusto", "financeiroOrcamento", "financeiroIndicadores",
@@ -2171,6 +2171,10 @@ const PERMISSOES = {
   ["fidelidadeCartoes", "fidelidadeHistorico"].forEach((section) => {
     if (!sections.includes(section)) sections.push(section);
   });
+});
+// Lista de compras rápida: quem já usa a Lista de Compras (mesma regra de ComprasRapidasSupport::PERFIS_PADRAO).
+Object.values(PERMISSOES).forEach((regras) => {
+  if (regras.sections?.includes("compras") && !regras.sections.includes("comprasRapidas")) regras.sections.push("comprasRapidas");
 });
 // Contagem de estoque: mesmo padrão por perfil usado no backend (ContagemEstoqueSupport::PADRAO_PERFIL).
 Object.entries({
@@ -5954,6 +5958,9 @@ function navigateTo(section) {
   if (contagemNavSubmenuNav) {
     contagemNavSubmenuNav.classList.toggle("open", CONTAGEM_SECTION_IDS.includes(section));
   }
+  if (section === "comprasRapidas") {
+    Promise.resolve(window.loadComprasRapidas?.()).catch((e) => showToast(e?.message || "Falha ao carregar a lista de compras rápida.", "error"));
+  }
   if (CONTAGEM_LOADERS[section]) {
     Promise.resolve(window[CONTAGEM_LOADERS[section]]?.()).catch((e) => showToast(e?.message || "Falha ao carregar a contagem de estoque.", "error"));
   }
@@ -7128,11 +7135,17 @@ function renderUnidades(lista) {
       botoes.push('<button type="button" class="btn primary" data-action="edit">Editar</button>');
       if (ativo) botoes.push('<button type="button" class="btn neutral" data-action="disable">Desativar</button>');
       else botoes.push('<button type="button" class="btn primary" data-action="enable">Ativar</button>');
+      botoes.push('<button type="button" class="btn neutral" data-action="logo" title="Logo usado no PDF e no WhatsApp da lista de compras">Logo</button>');
+      if (unidade.logo) botoes.push('<button type="button" class="btn neutral" data-action="logo-remover">Tirar logo</button>');
       if (podeExcluir) botoes.push('<button type="button" class="btn" data-action="delete" style="background:#b71c1c;color:#fff;">Excluir</button>');
     }
+    const logoUrl = unidade.logo ? getUsuarioFotoUrl(unidade.logo) : null;
+    const foto = logoUrl
+      ? `<img src="${escapeHtml(logoUrl)}" alt="Logo ${escapeHtml(unidade.nome || "")}" class="usuarios-foto rh-cand-card__photo unidade-logo-foto" loading="lazy" />`
+      : '<div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏢</div>';
     return `<article class="rh-cand-card" data-id="${unidade.id}">
       <div class="rh-cand-card__top">
-        <div class="usuarios-foto usuarios-foto--placeholder rh-cand-card__photo pat-card-icone" aria-hidden="true">🏢</div>
+        ${foto}
         <div class="rh-cand-card__main">
           <div class="rh-cand-card__head">
             <div>
@@ -7701,9 +7714,29 @@ function resolveListaPdfHref(path) {
   return `${API_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+function listaCompraParaCompartilhar(lista) {
+  return {
+    nome: lista.nome || "Lista de compras",
+    unidade_id: lista.unidade_id || null,
+    unidade_nome: lista.unidade_nome || "—",
+    usuario_nome: lista.responsavel_nome || lista.criado_por_nome || currentUser?.nome || "—",
+    created_at: lista.created_at || lista.data_criacao || lista.criado_em || null,
+    itens: (lista.itens || [])
+      .filter((it) => String(it.status || "").toUpperCase() !== "CANCELADO")
+      .map((it) => ({
+        produto_nome: it.produto_nome || "Item",
+        quantidade: Number(it.quantidade_planejada ?? it.quantidade ?? 0),
+        tipo: String(it.unidade || "").toUpperCase() === "UND" ? "UN" : String(it.unidade || "").toUpperCase(),
+        observacao: it.observacoes || "",
+      })),
+  };
+}
+
 function updateListaPdfButton(lista) {
   const abrirBtn = dom.listaCompraPdf;
   const gerarBtn = dom.listaCompraGerarPdf;
+  const whatsBtn = document.getElementById("listaCompraWhatsapp");
+  if (whatsBtn) whatsBtn.disabled = !lista || !(lista.itens || []).length;
   if (gerarBtn && !gerarBtn.dataset.loading) gerarBtn.dataset.loading = "0";
   if (!lista) {
     if (abrirBtn) {
@@ -14616,6 +14649,41 @@ function setupTables() {
       } catch (err) {
         showToast(err.message, "error");
       }
+    } else if (action === "logo") {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/png,image/jpeg,image/webp";
+      input.addEventListener("change", async () => {
+        const arquivo = input.files?.[0];
+        if (!arquivo) return;
+        const fd = new FormData();
+        fd.append("logo", arquivo);
+        try {
+          const res = await fetch(`${API_URL}/unidades/${unidade.id}/logo`, {
+            method: "POST",
+            headers: currentUser?.id != null ? { "X-Usuario-Id": String(currentUser.id) } : {},
+            body: fd,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.message || data.error || "Não foi possível salvar o logo.");
+          window.sasLimparCacheLogoUnidade?.(unidade.id);
+          showToast(data.message || "Logo da unidade salvo.", "success");
+          await loadUnidades();
+        } catch (err) {
+          showToast(err.message, "error");
+        }
+      });
+      input.click();
+    } else if (action === "logo-remover") {
+      if (!confirm("Tirar o logo desta unidade? O PDF e o WhatsApp voltam a usar o logo do grupo.")) return;
+      try {
+        const r = await fetchJSON(`/unidades/${unidade.id}/logo`, { method: "DELETE" });
+        window.sasLimparCacheLogoUnidade?.(unidade.id);
+        showToast(r.message || "Logo removido.", "success");
+        await loadUnidades();
+      } catch (err) {
+        showToast(err.message, "error");
+      }
     } else if (action === "delete") {
       if (!confirm("Remover permanentemente esta unidade?")) return;
       try {
@@ -16937,6 +17005,14 @@ function setupModals() {
   dom.listaCompraGerarPdf?.addEventListener("click", () => {
     if (dom.listaCompraGerarPdf.disabled) return;
     gerarPdfLista();
+  });
+  document.getElementById("listaCompraWhatsapp")?.addEventListener("click", () => {
+    if (!state.listaCompraAtual) return;
+    if (!window.sasListaCompraCompartilhar) {
+      showToast("Envio pelo WhatsApp indisponível. Recarregue a página.", "error");
+      return;
+    }
+    window.sasListaCompraCompartilhar.whatsapp(listaCompraParaCompartilhar(state.listaCompraAtual));
   });
   dom.listaCompraFiltroStatus?.addEventListener("change", (event) => {
     const value = (event.target.value || "ativas").toString().trim().toLowerCase();

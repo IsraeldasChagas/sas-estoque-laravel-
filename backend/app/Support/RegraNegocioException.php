@@ -2,7 +2,7 @@
 
 namespace App\Support;
 
-class ContagemEstoqueException extends \RuntimeException
+class RegraNegocioException extends \RuntimeException
 {
     public function __construct(string $message, public readonly int $status = 422)
     {

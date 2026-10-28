@@ -4,7 +4,7 @@
  * Rotas API — Contagem de estoque (inventário físico).
  */
 
-use App\Support\ContagemEstoqueException;
+use App\Support\RegraNegocioException;
 use App\Support\ContagemEstoqueSupport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -20,7 +20,7 @@ Route::prefix('contagem')->middleware('sas.usuario')->group(function () {
         }
         try {
             return response()->json($acao($u));
-        } catch (ContagemEstoqueException $e) {
+        } catch (RegraNegocioException $e) {
             return response()->json(['message' => $e->getMessage()], $e->status);
         } catch (\InvalidArgumentException|\RuntimeException $e) {
             return response()->json(['message' => $e->getMessage()], 422);

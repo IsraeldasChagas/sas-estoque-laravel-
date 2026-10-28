@@ -832,7 +832,7 @@ class ContagemEstoqueSupport
     private static function exigir(bool $condicao, string $mensagem, int $status = 422): void
     {
         if (! $condicao) {
-            throw new ContagemEstoqueException($mensagem, $status);
+            throw new RegraNegocioException($mensagem, $status);
         }
     }
 }
