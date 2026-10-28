@@ -1,0 +1,311 @@
+/* Contagem de estoque — mesmo padrão de cards das demais telas (fundo escuro, cards claros sem borda). */
+
+.contagem-section .caixa-page-wrap {
+  background: color-mix(in srgb, var(--card-bg) 84%, #000);
+  border-radius: 16px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.contagem-section .contagem-head h2 {
+  margin: 0;
+  color: var(--text);
+}
+
+.contagem-section .contagem-head p {
+  margin: 0.25rem 0 0;
+}
+
+.contagem-section .table-card,
+.contagem-section .rh-cand-card,
+.contagem-section .contagem-stat,
+.contagem-section .contagem-grafico {
+  background: var(--card-bg, #fff);
+  border: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
+}
+
+.contagem-section .table-card {
+  border-radius: 16px;
+  padding: 0 1rem 1rem;
+  margin: 0;
+}
+
+.contagem-section .table-card > header {
+  border-bottom: none;
+  background: transparent;
+  padding: 0.85rem 0 0.5rem;
+  font-weight: 700;
+}
+
+.contagem-section .table-card.contagem-lista {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
+.contagem-section .table-card.contagem-lista > header {
+  color: var(--text);
+  padding-top: 0;
+}
+
+.contagem-section .filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem 1rem;
+}
+
+.contagem-section .filters-grid label,
+.contagem-section .contagem-obs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  font-weight: 700;
+}
+
+.contagem-section input[type="text"],
+.contagem-section input[type="search"],
+.contagem-section input[type="date"],
+.contagem-section select,
+.contagem-section textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+  color: var(--text);
+  font: inherit;
+}
+
+.contagem-section input[readonly] {
+  background: color-mix(in srgb, var(--card-bg) 92%, #000);
+}
+
+.contagem-section .rh-cand-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.contagem-section .rh-cand-card__actions .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.contagem-aviso {
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: #fff4e5;
+  color: #8a4b00;
+  font-weight: 600;
+}
+
+.contagem-section .contagem-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #8a4b00;
+}
+
+.contagem-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.contagem-stat {
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contagem-stat span {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.contagem-stat strong {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.contagem-stat em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.contagem-graficos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.contagem-grafico {
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.contagem-grafico h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.contagem-grafico__box {
+  position: relative;
+  height: 260px;
+}
+
+.contagem-section .contagem-bloco {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.contagem-section .contagem-bloco__titulo {
+  margin: 0;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.contagem-section .contagem-bloco .subtle-text,
+.contagem-section .contagem-selecionados {
+  margin: 0;
+}
+
+.contagem-checklist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.35rem 0.75rem;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--card-bg) 94%, #000);
+}
+
+.contagem-checklist label {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.contagem-checklist small {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.contagem-section .contagem-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.contagem-section .contagem-obs {
+  margin-top: 1rem;
+}
+
+.contagem-section .contagem-barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+
+.contagem-section .contagem-barra__info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1 1 220px;
+}
+
+.contagem-section .contagem-barra input[type="search"] {
+  flex: 2 1 240px;
+  width: auto;
+}
+
+.contagem-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.contagem-chips .btn,
+.contagem-section .contagem-rodape .btn {
+  min-height: 34px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+}
+
+.contagem-section .contagem-lancar {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(180px, 2fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.contagem-section .contagem-rodape {
+  justify-content: flex-end;
+}
+
+.contagem-section .contagem-total {
+  margin: 0;
+  color: var(--text);
+}
+
+#contagemJustModal .contagem-just-modal {
+  width: min(480px, 96vw);
+}
+
+#contagemJustModal label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.5rem 0 0;
+  font-weight: 700;
+}
+
+#contagemJustModal textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1.5px solid #c5cdd6;
+  font: inherit;
+}
+
+@media (max-width: 640px) {
+  .contagem-section .contagem-lancar {
+    grid-template-columns: 1fr;
+  }
+
+  .contagem-graficos {
+    grid-template-columns: 1fr;
+  }
+
+  .contagem-section .rh-cand-card__actions .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}

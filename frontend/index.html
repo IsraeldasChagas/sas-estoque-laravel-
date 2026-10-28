@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261028084500-produtos-pdf" />
+    <link rel="stylesheet" href="style.css?v=20261028100000-contagem" />
     <script>
       (function () {
         try {
@@ -69,6 +69,7 @@
     <link rel="stylesheet" href="fiscal-cadastro.css?v=20260727-fiscal-modal-space" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-integracoes.css?v=20260716-int1" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="style-orcamentos.css?v=20260717-proto3" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="style-contagem.css?v=20261028100000-contagem" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous" media="print" onload="this.media='all'" />
   </head>
   <body>
@@ -193,6 +194,21 @@
           <a href="#" class="nav-link" data-section="locais"><span class="nav-icon" aria-hidden="true">📍</span><span class="nav-label">Locais</span></a>
           <a href="#" class="nav-link" data-section="movimentacoes"><span class="nav-icon" aria-hidden="true">🔄</span><span class="nav-label">Movimentacoes</span></a>
           <a href="#" class="nav-link" data-section="compras"><span class="nav-icon" aria-hidden="true">🛒</span><span class="nav-label">Lista de Compras</span></a>
+          <div class="nav-submenu nav-submenu--contagem">
+            <a href="#" class="nav-link nav-link-parent" id="contagemMenu">
+              <span class="nav-link-inner"><span class="nav-icon" aria-hidden="true">🧮</span><span class="nav-label">Contagem de estoque</span></span>
+              <span class="nav-arrow">▼</span>
+            </a>
+            <div class="nav-submenu-content">
+              <a href="#" class="nav-link nav-link-child" data-section="contagemDashboard"><span class="nav-icon" aria-hidden="true">📊</span><span class="nav-label">Dashboard de Inventário</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="contagemNova"><span class="nav-icon" aria-hidden="true">➕</span><span class="nav-label">Nova Contagem</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="contagemRealizar"><span class="nav-icon" aria-hidden="true">✅</span><span class="nav-label">Realizar Contagem</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="contagemConferencia"><span class="nav-icon" aria-hidden="true">🔎</span><span class="nav-label">Conferência e Divergências</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="contagemAprovacao"><span class="nav-icon" aria-hidden="true">🛡️</span><span class="nav-label">Aprovação de Ajustes</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="contagemHistorico"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Histórico e Relatórios</span></a>
+              <a href="#" class="nav-link nav-link-child" data-section="contagemConfiguracoes"><span class="nav-icon" aria-hidden="true">⚙️</span><span class="nav-label">Configurações</span></a>
+            </div>
+          </div>
           <a href="#" class="nav-link" data-section="logs"><span class="nav-icon" aria-hidden="true">📋</span><span class="nav-label">Logs e Auditoria</span></a>
           <a href="#" class="nav-link" data-section="relatorios"><span class="nav-icon" aria-hidden="true">📈</span><span class="nav-label">Relatorios</span></a>
           <a href="#" class="nav-link" data-section="fornecedores"><span class="nav-icon" aria-hidden="true">🚚</span><span class="nav-label">Fornecedores</span></a>
@@ -5555,6 +5571,13 @@
         <section id="fidelidadeHistoricoSection" class="view-section hidden"><div id="fidelidadeHistoricoRoot" class="orc-root"></div></section>
         <section id="fidelidadeRecompensasSection" class="view-section hidden"><div id="fidelidadeRecompensasRoot" class="orc-root"></div></section>
         <section id="fidelidadeRelatoriosSection" class="view-section hidden"><div id="fidelidadeRelatoriosRoot" class="orc-root"></div></section>
+        <section id="contagemDashboardSection" class="view-section hidden contagem-section"><div id="contagemDashboardRoot"></div></section>
+        <section id="contagemNovaSection" class="view-section hidden contagem-section"><div id="contagemNovaRoot"></div></section>
+        <section id="contagemRealizarSection" class="view-section hidden contagem-section"><div id="contagemRealizarRoot"></div></section>
+        <section id="contagemConferenciaSection" class="view-section hidden contagem-section"><div id="contagemConferenciaRoot"></div></section>
+        <section id="contagemAprovacaoSection" class="view-section hidden contagem-section"><div id="contagemAprovacaoRoot"></div></section>
+        <section id="contagemHistoricoSection" class="view-section hidden contagem-section"><div id="contagemHistoricoRoot"></div></section>
+        <section id="contagemConfiguracoesSection" class="view-section hidden contagem-section"><div id="contagemConfiguracoesRoot"></div></section>
       </main>
     </div>
 
@@ -6359,6 +6382,14 @@
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fidelidadeHistorico" /> Fidelidade — Extrato</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fidelidadeRecompensas" /> Fidelidade — Recompensas</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="fidelidadeRelatorios" /> Fidelidade — Relatórios</label>
+            <div style="margin-top:0.5rem;"><strong>Submenu: Contagem de estoque</strong></div>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="contagemDashboard" /> Contagem — Dashboard de inventário</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="contagemNova" /> Contagem — Nova contagem</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="contagemRealizar" /> Contagem — Realizar contagem</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="contagemConferencia" /> Contagem — Conferência e divergências</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="contagemAprovacao" /> Contagem — Aprovação de ajustes</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="contagemHistorico" /> Contagem — Histórico e relatórios</label>
+            <label class="checkbox-label"><input type="checkbox" name="perm_module" value="contagemConfiguracoes" /> Contagem — Configurações</label>
             <div style="margin-top:0.5rem;"><strong>Submenu: RH</strong></div>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="funcionarios" /> Funcionários</label>
             <label class="checkbox-label"><input type="checkbox" name="perm_module" value="rhRelatorios" /> RH — Relatório</label>
@@ -7970,6 +8001,7 @@
     <script defer src="integracoes.js?v=20260728-cfg-ui2"></script>
     <script defer src="orcamentos.js?v=20260717-functional1"></script>
     <script defer src="fidelidade.js?v=20260720-selo-minimo"></script>
+    <script defer src="contagem.js?v=20261028100000-contagem"></script>
     <script defer src="pwa.js?v=20261015-pwa"></script>
     <script>
       (function () {
@@ -7985,7 +8017,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261028084500-produtos-pdf"></script>
+    <script defer src="app.js?v=20261028100000-contagem"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>

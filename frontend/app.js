@@ -1651,6 +1651,19 @@ const ORCAMENTOS_SECTION_IDS = [
 const FIDELIDADE_SECTION_IDS = [
   "fidelidadePrograma", "fidelidadeCartoes", "fidelidadeHistorico", "fidelidadeRecompensas", "fidelidadeRelatorios",
 ];
+const CONTAGEM_SECTION_IDS = [
+  "contagemDashboard", "contagemNova", "contagemRealizar", "contagemConferencia",
+  "contagemAprovacao", "contagemHistorico", "contagemConfiguracoes",
+];
+const CONTAGEM_LOADERS = {
+  contagemDashboard: "loadContagemDashboard",
+  contagemNova: "loadContagemNova",
+  contagemRealizar: "loadContagemRealizar",
+  contagemConferencia: "loadContagemConferencia",
+  contagemAprovacao: "loadContagemAprovacao",
+  contagemHistorico: "loadContagemHistorico",
+  contagemConfiguracoes: "loadContagemConfiguracoes",
+};
 const ALL_NAV_SECTION_IDS = new Set([
   "boasVindas", "minhaConta", "dashboard", "kanbanAdministrativo", "unidades", "usuarios", "produtos", "fechaTecnica",
   "estoque", "lotes", "locais", "movimentacoes", "compras", "relatorios", "fornecedores",
@@ -1670,6 +1683,7 @@ const ALL_NAV_SECTION_IDS = new Set([
   "aylaDashboard", "aylaUsuarios", "aylaPermissoes", "aylaCanaisVoz", "aylaLogs", "aylaConfiguracoes",
   ...ORCAMENTOS_SECTION_IDS,
   ...FIDELIDADE_SECTION_IDS,
+  ...CONTAGEM_SECTION_IDS,
 ]);
 
 function syncUrlSectionHash(section) {
@@ -2155,6 +2169,19 @@ const PERMISSOES = {
   const sections = PERMISSOES[perfil]?.sections;
   if (!sections) return;
   ["fidelidadeCartoes", "fidelidadeHistorico"].forEach((section) => {
+    if (!sections.includes(section)) sections.push(section);
+  });
+});
+// Contagem de estoque: mesmo padrão por perfil usado no backend (ContagemEstoqueSupport::PADRAO_PERFIL).
+Object.entries({
+  ADMIN: CONTAGEM_SECTION_IDS,
+  GERENTE: CONTAGEM_SECTION_IDS.filter((s) => s !== "contagemConfiguracoes"),
+  ASSISTENTE_ADMINISTRATIVO: ["contagemDashboard", "contagemNova", "contagemRealizar", "contagemConferencia", "contagemHistorico"],
+  ESTOQUISTA: ["contagemDashboard", "contagemNova", "contagemRealizar", "contagemHistorico"],
+}).forEach(([perfil, lista]) => {
+  const sections = PERMISSOES[perfil]?.sections;
+  if (!sections) return;
+  lista.forEach((section) => {
     if (!sections.includes(section)) sections.push(section);
   });
 });
@@ -5440,7 +5467,7 @@ function applyPermissions() {
   }
   sections = sections.filter((s) => s !== "rhDocumentos");
   if (perfilAdminPlataforma) {
-    [...ORCAMENTOS_SECTION_IDS, ...FIDELIDADE_SECTION_IDS].forEach((s) => {
+    [...ORCAMENTOS_SECTION_IDS, ...FIDELIDADE_SECTION_IDS, ...CONTAGEM_SECTION_IDS].forEach((s) => {
       if (!sections.includes(s)) sections = [...sections, s];
     });
   }
@@ -5567,6 +5594,10 @@ function applyPermissions() {
   const fidelidadeNavSubmenu = document.getElementById("fidelidadeMenu")?.closest(".nav-submenu");
   if (fidelidadeNavSubmenu) {
     fidelidadeNavSubmenu.classList.toggle("hidden", !FIDELIDADE_SECTION_IDS.some((s) => regras.sections.includes(s)));
+  }
+  const contagemNavSubmenu = document.getElementById("contagemMenu")?.closest(".nav-submenu");
+  if (contagemNavSubmenu) {
+    contagemNavSubmenu.classList.toggle("hidden", !CONTAGEM_SECTION_IDS.some((s) => regras.sections.includes(s)));
   }
   // Oculta o menu pai "Financeiro" quando nenhum filho está permitido
   const financeiroNavSubmenu = document.getElementById("financeiroMenu")?.closest(".nav-submenu");
@@ -5918,6 +5949,13 @@ function navigateTo(section) {
   const fidelidadeNavSubmenuNav = document.getElementById("fidelidadeMenu")?.closest(".nav-submenu");
   if (fidelidadeNavSubmenuNav) {
     fidelidadeNavSubmenuNav.classList.toggle("open", FIDELIDADE_SECTION_IDS.includes(section));
+  }
+  const contagemNavSubmenuNav = document.getElementById("contagemMenu")?.closest(".nav-submenu");
+  if (contagemNavSubmenuNav) {
+    contagemNavSubmenuNav.classList.toggle("open", CONTAGEM_SECTION_IDS.includes(section));
+  }
+  if (CONTAGEM_LOADERS[section]) {
+    Promise.resolve(window[CONTAGEM_LOADERS[section]]?.()).catch((e) => showToast(e?.message || "Falha ao carregar a contagem de estoque.", "error"));
   }
   const integracoesNavSubmenuNav = document.getElementById("integracoesMenu")?.closest(".nav-submenu");
   if (integracoesNavSubmenuNav) {
