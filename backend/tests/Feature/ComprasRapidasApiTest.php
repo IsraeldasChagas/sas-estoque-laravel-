@@ -74,11 +74,11 @@ class ComprasRapidasApiTest extends TestCase
             ->assertJsonPath('produtos.0.nome', 'Tomate');
         $this->api('GET', '/meta', 4)->assertStatus(403);
 
-        $this->api('POST', '/', 2, ['nome' => 'Feira', 'itens' => []])->assertStatus(422);
-        $this->api('POST', '/', 2, ['nome' => '', 'itens' => [['produto_nome' => 'Tomate', 'quantidade' => 1]]])->assertStatus(422);
-        $this->api('POST', '/', 2, ['nome' => 'Feira', 'unidade_id' => 2, 'itens' => [['produto_nome' => 'Tomate', 'quantidade' => 1]]])->assertStatus(403);
+        $this->api('POST', '', 2, ['nome' => 'Feira', 'itens' => []])->assertStatus(422);
+        $this->api('POST', '', 2, ['nome' => '', 'itens' => [['produto_nome' => 'Tomate', 'quantidade' => 1]]])->assertStatus(422);
+        $this->api('POST', '', 2, ['nome' => 'Feira', 'unidade_id' => 2, 'itens' => [['produto_nome' => 'Tomate', 'quantidade' => 1]]])->assertStatus(403);
 
-        $lista = $this->api('POST', '/', 2, [
+        $lista = $this->api('POST', '', 2, [
             'nome' => 'Feira de sábado',
             'itens' => [
                 ['produto_id' => 10, 'produto_nome' => 'Tomate', 'quantidade' => '2,5', 'tipo' => 'KG', 'observacao' => 'Bem vermelho'],
@@ -90,14 +90,14 @@ class ComprasRapidasApiTest extends TestCase
         $this->assertSame(2.5, $lista['itens'][0]['quantidade']);
         $this->assertSame('UN', $lista['itens'][1]['tipo']);
 
-        $this->api('GET', '/', 3)->assertOk()->assertJsonCount(0);
+        $this->api('GET', '', 3)->assertOk()->assertJsonCount(0);
         $this->api('PUT', "/{$lista['id']}", 3, ['status' => 'feita'])->assertStatus(403);
 
         $this->api('PUT', "/{$lista['id']}", 2, ['nome' => 'Feira', 'itens' => [['produto_nome' => 'Alface', 'quantidade' => 4, 'tipo' => 'UN']]])
             ->assertOk()->assertJsonCount(1, 'lista.itens')->assertJsonPath('lista.itens.0.produto_nome', 'Alface');
         $this->api('PUT', "/{$lista['id']}", 2, ['status' => 'feita'])->assertOk()->assertJsonPath('lista.status', 'feita');
-        $this->api('GET', '/?status=aberta', 2)->assertJsonCount(0);
-        $this->api('GET', '/?status=feita', 1)->assertJsonCount(1)->assertJsonPath('0.itens.0.produto_nome', 'Alface');
+        $this->api('GET', '?status=aberta', 2)->assertJsonCount(0);
+        $this->api('GET', '?status=feita', 1)->assertJsonCount(1)->assertJsonPath('0.itens.0.produto_nome', 'Alface');
 
         $this->api('DELETE', "/{$lista['id']}", 1)->assertOk();
         $this->assertSame(0, DB::table('compras_rapidas_itens')->count());

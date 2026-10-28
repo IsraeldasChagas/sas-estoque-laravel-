@@ -24,7 +24,7 @@
   const st = {
     meta: null,
     listas: [],
-    filtro: "aberta",
+    filtro: "todas",
     unidadeId: "",
     nome: "",
     rascunho: [],
@@ -536,7 +536,7 @@
     if (!st.rascunho.length) return toast("Informe pelo menos um produto.", "warning");
     const corpo = { nome: st.nome.trim(), unidade_id: st.unidadeId ? Number(st.unidadeId) : null, itens: st.rascunho };
     try {
-      const r = st.editando ? await send(`/${st.editando.id}`, "PUT", corpo) : await send("/", "POST", corpo);
+      const r = st.editando ? await send(`/${st.editando.id}`, "PUT", corpo) : await send("", "POST", corpo);
       toast(r.message || "Lista salva.", "success");
       limparFormulario();
       await recarregarListas();
@@ -546,7 +546,7 @@
   }
 
   async function recarregarListas() {
-    st.listas = await api(`/?status=${encodeURIComponent(st.filtro)}`);
+    st.listas = await api(`?status=${encodeURIComponent(st.filtro)}`);
     render();
   }
 
@@ -649,7 +649,7 @@
     try {
       st.meta = await api("/meta");
       if (!st.editando && !st.rascunho.length && !st.nome) limparFormulario();
-      st.listas = await api(`/?status=${encodeURIComponent(st.filtro)}`);
+      st.listas = await api(`?status=${encodeURIComponent(st.filtro)}`);
       render();
     } catch (e) {
       root.innerHTML = `<div class="caixa-page-wrap cr-wrap"><p class="rh-cand-empty">${esc(e?.message || "Falha ao carregar.")}</p></div>`;
