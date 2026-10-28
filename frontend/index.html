@@ -7330,6 +7330,7 @@
           </div>
           <div class="grid-two">
             <label>Categoria<select name="categoria_id" id="patFormCategoria"><option value="">Selecione</option></select></label>
+            <label id="patFormSubcategoriaWrap" class="hidden">Subcategoria<select name="subcategoria" id="patFormSubcategoria"><option value="">Selecione</option></select></label>
             <label>Unidade / filial<select name="unidade_id" id="patFormUnidade"><option value="">Selecione</option></select></label>
           </div>
           <div class="grid-two">
@@ -7468,6 +7469,7 @@
               <option value="refrigeracao">Refrigeração</option>
             </select>
           </label>
+          <label>Subcategorias<textarea id="patCatSubcategorias" rows="4" placeholder="Uma por linha. Ex.: TV&#10;Celular&#10;Tablet"></textarea></label>
           <label>Ordem<input type="number" id="patCatOrdem" value="50" /></label>
           <footer><button type="submit" class="btn primary">Salvar</button></footer>
         </form>
@@ -7975,7 +7977,7 @@
     <!-- Script principal da aplicacao -->
     <script defer src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
     <script defer src="energia.js?v=20260615-submenu-fix2"></script>
-    <script defer src="patrimonio.js?v=20261025480000-pat-cards"></script>
+    <script defer src="patrimonio.js?v=20261028120000-subcat"></script>
     <script defer src="investimento.js?v=20260607-investimento-collapse"></script>
     <script defer src="openclaw-integracao.js?v=20260706-oc4"></script>
     <script defer src="ayla-ia.js?v=20260714-ayla-padrao"></script>

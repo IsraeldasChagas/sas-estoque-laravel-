@@ -547,7 +547,7 @@
       const [situacao, tom] = PAT_SITUACAO[p.situacao] || [p.situacao || "—", "info"];
       return patDashCard({
         titulo: p.nome,
-        sub: [p.categoria_nome, p.unidade_nome].filter(Boolean).join(" · "),
+        sub: [[p.categoria_nome, p.subcategoria].filter(Boolean).join(" › "), p.unidade_nome].filter(Boolean).join(" · "),
         pill: situacao,
         tom,
         linhas: [["Código", p.codigo || "—"], ["Setor", p.setor || "—"], ["Valor atual", fmtMoeda(p.valor_atual)]],
@@ -580,6 +580,7 @@
       content.innerHTML = `
         <div class="pat-ficha-grid">
           <div><strong>Categoria:</strong> ${esc(p.categoria_nome)}</div>
+          ${p.subcategoria ? `<div><strong>Subcategoria:</strong> ${esc(p.subcategoria)}</div>` : ""}
           <div><strong>Unidade:</strong> ${esc(p.unidade_nome)}</div>
           <div><strong>Setor:</strong> ${esc(p.setor || "—")}</div>
           <div><strong>Responsável:</strong> ${esc(p.responsavel)}</div>
@@ -616,7 +617,11 @@
       icone: c.icone || "",
       pill: c.ativo ? "Ativa" : "Inativa",
       tom: c.ativo ? "ok" : "danger",
-      linhas: [["Campos específicos", c.tipo_campos || "geral"], ["Ordem", String(c.ordem ?? 0)]],
+      linhas: [
+        ["Campos específicos", c.tipo_campos || "geral"],
+        ...(Array.isArray(c.subcategorias) && c.subcategorias.length ? [["Subcategorias", c.subcategorias.join(", ")]] : []),
+        ["Ordem", String(c.ordem ?? 0)],
+      ],
       acoes: `<button type="button" class="btn primary pat-cat-editar" data-id="${esc(c.id)}" data-nome="${esc(c.nome)}" data-icone="${esc(c.icone || "")}" data-tipo="${esc(c.tipo_campos)}" data-ordem="${esc(c.ordem)}">Editar</button>
         <button type="button" class="btn pat-cat-excluir" data-id="${esc(c.id)}" style="background:#b71c1c;border-color:#b71c1c;color:#fff;">Excluir</button>`,
     })).join("");
@@ -829,7 +834,7 @@
               <span class="rh-cand-pill rh-cand-pill--${tomSit[p.situacao] || "info"}">${esc(PAT_SIT_LABEL[p.situacao] || p.situacao || "—")}</span>
             </div>
             <div class="rh-cand-card__meta">
-              <div class="rh-cand-card__row"><span>Categoria</span><strong>${esc(p.categoria_nome || "—")}</strong></div>
+              <div class="rh-cand-card__row"><span>Categoria</span><strong>${esc([p.categoria_nome, p.subcategoria].filter(Boolean).join(" › ") || "—")}</strong></div>
               <div class="rh-cand-card__row"><span>Unidade</span><strong>${esc(p.unidade_nome || "—")}</strong></div>
               <div class="rh-cand-card__row"><span>Setor</span><strong>${esc(p.setor || "—")}</strong></div>
               <div class="rh-cand-card__row"><span>Responsável</span><strong>${esc(p.responsavel || "—")}</strong></div>
@@ -983,17 +988,39 @@
     }).join("");
   }
 
-  function toggleCamposEspecificos() {
+  function subcategoriasDaCategoria(categoriaId) {
+    const cat = patState.categorias.find((c) => String(c.id) === String(categoriaId));
+    return Array.isArray(cat?.subcategorias) ? cat.subcategorias : [];
+  }
+
+  function atualizarSubcategorias(valor) {
+    const wrap = document.getElementById("patFormSubcategoriaWrap");
+    const sel = document.getElementById("patFormSubcategoria");
+    if (!wrap || !sel) return;
+    const lista = [...subcategoriasDaCategoria(document.getElementById("patFormCategoria")?.value)];
+    if (valor && !lista.includes(valor)) lista.push(valor);
+    sel.innerHTML = '<option value="">Selecione</option>' + lista.map((s) => `<option value="${esc(s)}">${esc(s)}</option>`).join("");
+    sel.value = valor || "";
+    wrap.classList.toggle("hidden", lista.length === 0);
+  }
+
+  function tipoCamposAtual() {
     const sel = document.getElementById("patFormCategoria");
-    const tipo = sel?.selectedOptions?.[0]?.dataset?.tipo || "geral";
+    const sub = document.getElementById("patFormSubcategoria")?.value || "";
+    const semAcento = sub.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    if (semAcento === "informatica") return "informatica";
+    return sel?.selectedOptions?.[0]?.dataset?.tipo || "geral";
+  }
+
+  function toggleCamposEspecificos() {
+    const tipo = tipoCamposAtual();
     document.querySelectorAll(".patrimonio-campos-especificos").forEach((el) => {
       el.classList.toggle("is-visible", el.dataset.tipo === tipo);
     });
   }
 
   function coletarDadosEspecificos() {
-    const sel = document.getElementById("patFormCategoria");
-    const tipo = sel?.selectedOptions?.[0]?.dataset?.tipo || "geral";
+    const tipo = tipoCamposAtual();
     const box = document.querySelector(`.patrimonio-campos-especificos[data-tipo="${tipo}"]`);
     const dados = {};
     if (box) {
@@ -1023,17 +1050,20 @@
     document.getElementById("patModalTitle").textContent = editId ? "✏️ Editar patrimônio" : "📦 Novo patrimônio";
     renderAnexosLista([], []);
     patFormFeedback("");
+    atualizarSubcategorias("");
     toggleCamposEspecificos();
     patSetupMoedaInputs(form);
     modal.classList.add("active");
-    Promise.all([populatePatUnidades(), loadPatCategorias(), loadPatSetores().then(() => populatePatSetorSelects())]).catch(() => {});
+    const categoriasProntas = loadPatCategorias().catch(() => []);
+    Promise.all([populatePatUnidades(), categoriasProntas, loadPatSetores().then(() => populatePatSetorSelects())]).catch(() => {});
     if (editId) {
-      patFetch(`/patrimonio/patrimonios/${editId}`).then((res) => {
+      Promise.all([patFetch(`/patrimonio/patrimonios/${editId}`), categoriasProntas]).then(([res]) => {
         const p = res.patrimonio;
         const f = form;
         if (f.nome) f.nome.value = p.nome || "";
         if (f.numero_serial) f.numero_serial.value = p.numero_serial || "";
         if (f.categoria_id) f.categoria_id.value = p.categoria_id || "";
+        atualizarSubcategorias(p.subcategoria || "");
         if (f.marca) f.marca.value = p.marca || "";
         if (f.modelo) f.modelo.value = p.modelo || "";
         if (f.cor) f.cor.value = p.cor || "";
@@ -1134,7 +1164,11 @@
       });
     });
     document.getElementById("patBtnNovo")?.addEventListener("click", () => abrirModalPatrimonio(null));
-    document.getElementById("patFormCategoria")?.addEventListener("change", toggleCamposEspecificos);
+    document.getElementById("patFormCategoria")?.addEventListener("change", () => {
+      atualizarSubcategorias("");
+      toggleCamposEspecificos();
+    });
+    document.getElementById("patFormSubcategoria")?.addEventListener("change", toggleCamposEspecificos);
     document.getElementById("patFormCalcDeprec")?.addEventListener("click", calcDepreciacaoLocal);
 
     document.getElementById("patListaTbody")?.addEventListener("click", async (e) => {
@@ -1259,6 +1293,10 @@
         nome: document.getElementById("patCatNome")?.value,
         icone: document.getElementById("patCatIcone")?.value,
         tipo_campos: document.getElementById("patCatTipo")?.value,
+        subcategorias: (document.getElementById("patCatSubcategorias")?.value || "")
+          .split(/[\n,;]+/)
+          .map((s) => s.trim())
+          .filter(Boolean),
         ordem: parseInt(document.getElementById("patCatOrdem")?.value || "50", 10),
         ativo: true,
       };
@@ -1266,6 +1304,7 @@
         if (id) await patFetch(`/patrimonio/categorias/${id}`, { method: "PUT", body: JSON.stringify(body) });
         else await patFetch("/patrimonio/categorias", { method: "POST", body: JSON.stringify(body) });
         document.getElementById("patCatModal")?.classList.remove("active");
+        await loadPatCategorias(true);
         loadPatrimonioCategorias();
         patToast("Categoria salva.", "success");
       } catch (err) {
@@ -1339,6 +1378,8 @@
         document.getElementById("patCatIcone").value = edit.dataset.icone || "";
         document.getElementById("patCatTipo").value = edit.dataset.tipo || "geral";
         document.getElementById("patCatOrdem").value = edit.dataset.ordem || "50";
+        const subsEl = document.getElementById("patCatSubcategorias");
+        if (subsEl) subsEl.value = subcategoriasDaCategoria(edit.dataset.id).join("\n");
         document.getElementById("patCatModalTitle").textContent = "Editar categoria";
         document.getElementById("patCatModal").classList.add("active");
         return;
@@ -1347,6 +1388,7 @@
       if (!btn || !confirm("Excluir categoria?")) return;
       try {
         await patFetch(`/patrimonio/categorias/${btn.dataset.id}`, { method: "DELETE" });
+        await loadPatCategorias(true);
         loadPatrimonioCategorias();
       } catch (err) {
         patToast(err.message, "error");

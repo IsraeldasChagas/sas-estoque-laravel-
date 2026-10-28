@@ -155,6 +155,7 @@ $patrimonioMapPatrimonio = function ($r) {
         'fornecedor' => $r->fornecedor,
         'numero_nf' => $r->numero_nf,
         'observacoes' => $r->observacoes ?? null,
+        'subcategoria' => $r->subcategoria ?? null,
         'dados_especificos' => $dados,
         'created_at' => $r->created_at,
         'updated_at' => $r->updated_at,
@@ -321,17 +322,39 @@ Route::get('/patrimonio/dashboard', function (Request $request) use ($patrimonio
 });
 
 // ——— Categorias ———
+/** Aceita lista ou texto (uma por linha ou separadas por vírgula); devolve JSON ou null. */
+$patSubcategoriasJson = static function ($raw): ?string {
+    if (is_string($raw)) {
+        $decoded = json_decode($raw, true);
+        $raw = is_array($decoded) ? $decoded : preg_split('/[\r\n,;]+/', $raw);
+    }
+    $lista = [];
+    foreach ((array) $raw as $item) {
+        $nome = trim((string) $item);
+        if ($nome !== '' && ! in_array(mb_strtolower($nome), array_map('mb_strtolower', $lista), true)) {
+            $lista[] = mb_substr($nome, 0, 120);
+        }
+    }
+
+    return $lista ? json_encode($lista, JSON_UNESCAPED_UNICODE) : null;
+};
+
 Route::get('/patrimonio/categorias', function (Request $request) use ($patrimonioAuth, $podePatrimonio, $patJson) {
     $u = $patrimonioAuth($request);
     if (! $podePatrimonio($u, 'patrimonioCategorias')) {
         return $patJson(['message' => 'Sem permissão'], 403);
     }
-    $rows = DB::table('patrimonio_categorias')->orderBy('ordem')->orderBy('nome')->get();
+    $rows = DB::table('patrimonio_categorias')->orderBy('ordem')->orderBy('nome')->get()->map(function ($c) {
+        $subs = isset($c->subcategorias) ? json_decode((string) $c->subcategorias, true) : null;
+        $c->subcategorias = is_array($subs) ? array_values($subs) : [];
+
+        return $c;
+    });
 
     return $patJson($rows);
 });
 
-Route::post('/patrimonio/categorias', function (Request $request) use ($patrimonioAuth, $podePatrimonio, $patJson) {
+Route::post('/patrimonio/categorias', function (Request $request) use ($patrimonioAuth, $podePatrimonio, $patJson, $patSubcategoriasJson) {
     $u = $patrimonioAuth($request);
     if (! $podePatrimonio($u, 'patrimonioCategorias')) {
         return $patJson(['message' => 'Sem permissão'], 403);
@@ -341,7 +364,7 @@ Route::post('/patrimonio/categorias', function (Request $request) use ($patrimon
         return $patJson(['message' => 'Nome obrigatório'], 422);
     }
     $slug = Str::slug($nome);
-    $id = DB::table('patrimonio_categorias')->insertGetId([
+    $dados = [
         'nome' => $nome,
         'slug' => $slug . '-' . time(),
         'icone' => $request->input('icone'),
@@ -350,24 +373,32 @@ Route::post('/patrimonio/categorias', function (Request $request) use ($patrimon
         'tipo_campos' => $request->input('tipo_campos', 'geral'),
         'created_at' => now(),
         'updated_at' => now(),
-    ]);
+    ];
+    if (Schema::hasColumn('patrimonio_categorias', 'subcategorias')) {
+        $dados['subcategorias'] = $patSubcategoriasJson($request->input('subcategorias'));
+    }
+    $id = DB::table('patrimonio_categorias')->insertGetId($dados);
 
     return $patJson(['message' => 'Categoria criada', 'id' => $id], 201);
 });
 
-Route::put('/patrimonio/categorias/{id}', function (Request $request, $id) use ($patrimonioAuth, $podePatrimonio, $patJson) {
+Route::put('/patrimonio/categorias/{id}', function (Request $request, $id) use ($patrimonioAuth, $podePatrimonio, $patJson, $patSubcategoriasJson) {
     $u = $patrimonioAuth($request);
     if (! $podePatrimonio($u, 'patrimonioCategorias')) {
         return $patJson(['message' => 'Sem permissão'], 403);
     }
-    DB::table('patrimonio_categorias')->where('id', $id)->update([
+    $dados = [
         'nome' => $request->input('nome'),
         'icone' => $request->input('icone'),
         'ordem' => $request->input('ordem'),
         'ativo' => $request->boolean('ativo', true),
         'tipo_campos' => $request->input('tipo_campos'),
         'updated_at' => now(),
-    ]);
+    ];
+    if ($request->has('subcategorias') && Schema::hasColumn('patrimonio_categorias', 'subcategorias')) {
+        $dados['subcategorias'] = $patSubcategoriasJson($request->input('subcategorias'));
+    }
+    DB::table('patrimonio_categorias')->where('id', $id)->update($dados);
 
     return $patJson(['message' => 'Categoria atualizada']);
 });
@@ -572,7 +603,13 @@ Route::post('/patrimonio/patrimonios', function (Request $request) use (
         ? (float) $request->input('valor_atual') : $dep['valor_atual'];
     [$setorId, $setorNome] = $patrimonioResolverSetor($request);
 
-    $id = DB::table('patrimonios')->insertGetId([
+    $extras = [];
+    if (Schema::hasColumn('patrimonios', 'subcategoria')) {
+        $sub = trim((string) $request->input('subcategoria', ''));
+        $extras['subcategoria'] = $sub !== '' ? mb_substr($sub, 0, 120) : null;
+    }
+
+    $id = DB::table('patrimonios')->insertGetId($extras + [
         'codigo' => $patrimonioGerarCodigo($unidadeId),
         'qr_token' => Str::random(32),
         'nome' => $nome,
@@ -711,6 +748,10 @@ Route::post('/patrimonio/patrimonios/{id}', function (Request $request, $id) use
         'dados_especificos' => $dadosEsp ? json_encode($dadosEsp, JSON_UNESCAPED_UNICODE) : null,
         'updated_at' => now(),
     ], fn ($v) => $v !== null && $v !== '');
+    if ($request->has('subcategoria') && Schema::hasColumn('patrimonios', 'subcategoria')) {
+        $sub = trim((string) $request->input('subcategoria', ''));
+        $data['subcategoria'] = $sub !== '' ? mb_substr($sub, 0, 120) : null;
+    }
 
     DB::table('patrimonios')->where('id', $id)->update($data);
     $patrimonioRegistrarHistorico((int) $id, 'edicao', $data, $u->id ?? null);

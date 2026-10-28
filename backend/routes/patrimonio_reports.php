@@ -275,7 +275,7 @@ Route::get('/patrimonio/relatorios/ficha/{id}.pdf', function (Request $request, 
     <p class="meta">Código ' . $patH($p['codigo']) . ' — emitido ' . $patH(now()->format('d/m/Y H:i')) . '</p>
     <table><tbody>
     <tr><td><strong>Nome</strong></td><td>' . $patH($p['nome']) . '</td></tr>
-    <tr><td><strong>Categoria</strong></td><td>' . $patH($p['categoria_nome']) . '</td></tr>
+    <tr><td><strong>Categoria</strong></td><td>' . $patH(trim(($p['categoria_nome'] ?? '') . (! empty($p['subcategoria']) ? ' › ' . $p['subcategoria'] : ''))) . '</td></tr>
     <tr><td><strong>Unidade</strong></td><td>' . $patH($p['unidade_nome']) . '</td></tr>
     <tr><td><strong>Responsável</strong></td><td>' . $patH($p['responsavel']) . '</td></tr>
     <tr><td><strong>Situação</strong></td><td>' . $patH($p['situacao']) . '</td></tr>
