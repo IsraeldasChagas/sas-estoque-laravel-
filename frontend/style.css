@@ -12240,6 +12240,71 @@ select[size]:not([size="1"]) {
 #produtosSection > .caixa-page-wrap > .actions {
   padding: 8px 10px;
   border-radius: 12px;
+  align-items: center;
+}
+#produtosSection > .caixa-page-wrap > .actions > .btn {
+  align-self: center;
+  min-height: 34px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+#produtosPdfModal .produtos-pdf-modal {
+  width: min(640px, 100%);
+}
+#produtosPdfModal .produtos-pdf-modal__body {
+  padding: 0 1.25rem 1rem;
+}
+#produtosPdfModal .produtos-pdf-secao-titulo {
+  margin: 1rem 0 0.5rem;
+  font-weight: 800;
+  color: var(--text, #1a1a1a);
+}
+#produtosPdfModal .produtos-pdf-secao-titulo:first-child {
+  margin-top: 0;
+}
+#produtosPdfModal .produtos-pdf-filtros {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem 1rem;
+}
+#produtosPdfModal .produtos-pdf-filtros label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0;
+  font-weight: 700;
+}
+#produtosPdfModal .produtos-pdf-filtros input[type="text"],
+#produtosPdfModal .produtos-pdf-filtros select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1.5px solid #c5cdd6;
+  background: var(--card-bg, #fff);
+}
+#produtosPdfModal .produtos-pdf-filtros .produtos-pdf-check {
+  flex-direction: row;
+  align-items: center;
+  align-self: end;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+#produtosPdfModal .produtos-pdf-campos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem 1rem;
+}
+#produtosPdfModal .produtos-pdf-campos label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-weight: 700;
+  cursor: pointer;
 }
 #produtosSection .rh-cand-card.produto-abaixo-minimo {
   box-shadow: inset 4px 0 0 #b71c1c, 0 8px 22px rgba(0, 0, 0, 0.12);

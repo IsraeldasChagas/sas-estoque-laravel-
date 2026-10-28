@@ -6614,6 +6614,277 @@ function renderProdutos(lista) {
   }).join("");
 }
 
+const PRODUTOS_PDF_COL_DEF = {
+  codigo: { th: "Código interno" },
+  nome: { th: "Nome" },
+  categoria: { th: "Categoria" },
+  unidade_base: { th: "Un. medida" },
+  unidade: { th: "Unidade" },
+  custo_medio: { th: "Custo médio" },
+  estoque_minimo: { th: "Estoque mínimo" },
+  estoque_atual: { th: "Estoque atual" },
+  tipo_fiscal: { th: "Tipo fiscal" },
+  fiscal: { th: "Status fiscal" },
+  status: { th: "Status" },
+};
+
+function produtosPdfCellHtml(colKey, produto, infoMinimo) {
+  switch (colKey) {
+    case "codigo":
+      return escapeHtml(produto.codigo_barras || "—");
+    case "nome":
+      return escapeHtml(produto.nome || "—");
+    case "categoria":
+      return escapeHtml(produto.categoria || "—");
+    case "unidade_base":
+      return escapeHtml(normalizarUnidadeBase(produto.unidade_base) || "—");
+    case "unidade":
+      return escapeHtml(produto.unidade_nome || "—");
+    case "custo_medio":
+      return `R$ ${escapeHtml(formatNumber(produto.custo_medio, 2))}`;
+    case "estoque_minimo":
+      return escapeHtml(formatNumber(produto.estoque_minimo, 3));
+    case "estoque_atual":
+      return infoMinimo ? escapeHtml(formatNumber(infoMinimo.estoque_atual, 3)) : "—";
+    case "tipo_fiscal":
+      return escapeHtml(
+        produto.tipo_fiscal_label ||
+          (typeof window.fiscalLabelTipo === "function" ? window.fiscalLabelTipo(produto.tipo_fiscal) : produto.tipo_fiscal) ||
+          "—"
+      );
+    case "fiscal":
+      return escapeHtml(produto.status_fiscal_label || produto.status_fiscal || "—");
+    case "status": {
+      if (Number(produto.ativo) !== 1) return "Inativo";
+      return infoMinimo ? "Abaixo do mínimo" : "Ativo";
+    }
+    default:
+      return "—";
+  }
+}
+
+function produtosPdfPreencherCategorias() {
+  const select = document.getElementById("produtosPdfCategoria");
+  if (!select) return;
+  const atual = select.value;
+  const mapa = new Map();
+  const formSelect = dom.produtosForm?.querySelector('select[name="categoria"]');
+  [...(formSelect?.options || [])].forEach((opt) => {
+    if (opt.value) mapa.set(opt.value.toUpperCase(), opt.textContent.trim());
+  });
+  (state.produtos || []).forEach((p) => {
+    const cat = String(p.categoria || "").trim();
+    if (cat && !mapa.has(cat.toUpperCase())) mapa.set(cat.toUpperCase(), cat);
+  });
+  select.innerHTML =
+    '<option value="">Todas</option>' +
+    [...mapa.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], "pt-BR"))
+      .map(([valor, label]) => `<option value="${escapeHtml(valor)}">${escapeHtml(label)}</option>`)
+      .join("");
+  select.value = atual && mapa.has(atual) ? atual : "";
+}
+
+function produtosPdfPreencherUnidades() {
+  const select = document.getElementById("produtosPdfUnidade");
+  if (!select) return;
+  const atual = select.value;
+  const unidades = Array.isArray(state.unidades) ? state.unidades : [];
+  select.innerHTML =
+    '<option value="">Todas</option>' +
+    unidades
+      .filter((u) => u && Number(u.id) > 0)
+      .map((u) => `<option value="${escapeHtml(String(u.id))}">${escapeHtml(u.nome || `Unidade ${u.id}`)}</option>`)
+      .join("");
+  select.value = atual && unidades.some((u) => String(u.id) === atual) ? atual : "";
+}
+
+async function produtosOpenPdfModal() {
+  const modal = document.getElementById("produtosPdfModal");
+  if (!modal) return;
+  await loadUnidades(false).catch(() => {});
+  produtosPdfPreencherCategorias();
+  produtosPdfPreencherUnidades();
+  const busca = document.getElementById("produtosPdfBusca");
+  const buscaLista = document.getElementById("produtoSearch")?.value?.trim() || "";
+  if (busca) busca.value = isValorAutofillEmail(buscaLista) ? "" : buscaLista;
+  const fiscal = document.getElementById("produtosPdfFiscal");
+  const fiscalLista = document.getElementById("produtoFiscalFiltro")?.value || "";
+  if (fiscal) fiscal.value = fiscalLista;
+  modal.classList.add("active");
+}
+
+function produtosClosePdfModal() {
+  document.getElementById("produtosPdfModal")?.classList.remove("active");
+}
+
+function produtosPdfLerFiltros() {
+  const val = (id) => (document.getElementById(id)?.value || "").trim();
+  return {
+    busca: val("produtosPdfBusca"),
+    categoria: val("produtosPdfCategoria"),
+    unidadeId: val("produtosPdfUnidade"),
+    status: val("produtosPdfStatus"),
+    fiscal: val("produtosPdfFiscal"),
+    abaixoMinimo: !!document.getElementById("produtosPdfAbaixoMinimo")?.checked,
+  };
+}
+
+function produtosPdfResumoFiltros(filtros) {
+  const textoSelect = (id) => {
+    const sel = document.getElementById(id);
+    return sel?.options[sel.selectedIndex]?.textContent?.trim() || "";
+  };
+  const partes = [];
+  if (filtros.busca) partes.push(`Busca: ${filtros.busca}`);
+  partes.push(`Categoria: ${filtros.categoria ? textoSelect("produtosPdfCategoria") : "Todas"}`);
+  partes.push(`Unidade: ${filtros.unidadeId ? textoSelect("produtosPdfUnidade") : "Todas"}`);
+  partes.push(`Status: ${textoSelect("produtosPdfStatus") || "Todos"}`);
+  partes.push(`Fiscal: ${filtros.fiscal ? textoSelect("produtosPdfFiscal") : "Todos"}`);
+  if (filtros.abaixoMinimo) partes.push("Só abaixo do estoque mínimo");
+  return escapeHtml(partes.join(" · "));
+}
+
+async function produtosGerarRelatorioPdf() {
+  const colKeys = [...document.querySelectorAll("#produtosPdfCampos input[data-prod-pdf-col]:checked")]
+    .map((inp) => inp.getAttribute("data-prod-pdf-col"))
+    .filter((key) => PRODUTOS_PDF_COL_DEF[key]);
+  if (!colKeys.length) {
+    showToast("Marque ao menos uma informação para o PDF.", "warning");
+    return;
+  }
+
+  const filtros = produtosPdfLerFiltros();
+  const params = new URLSearchParams();
+  params.set("todas", "1");
+  if (filtros.busca) params.set("search", filtros.busca);
+  if (filtros.fiscal) params.set("status_fiscal", filtros.fiscal);
+  if (filtros.unidadeId) params.set("unidade_id", filtros.unidadeId);
+
+  const precisaMinimos = filtros.abaixoMinimo || colKeys.includes("estoque_atual") || colKeys.includes("status");
+  const [fonte, minimos] = await Promise.all([
+    fetchJSON(`/produtos?${params}`),
+    precisaMinimos ? fetchJSON("/estoque-abaixo-minimo").catch(() => ({ produtos: [] })) : Promise.resolve({ produtos: [] }),
+  ]);
+  const abaixoMinimoMap = new Map(
+    (Array.isArray(minimos?.produtos) ? minimos.produtos : []).map((item) => [String(item.produto_id), item])
+  );
+
+  const lista = (Array.isArray(fonte) ? fonte : [])
+    .filter((p) => {
+      if (filtros.categoria && String(p.categoria || "").trim().toUpperCase() !== filtros.categoria) return false;
+      if (filtros.status === "ativo" && Number(p.ativo) !== 1) return false;
+      if (filtros.status === "inativo" && Number(p.ativo) === 1) return false;
+      if (filtros.abaixoMinimo && !abaixoMinimoMap.has(String(p.id))) return false;
+      return true;
+    })
+    .sort((a, b) => String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR"));
+
+  if (!lista.length) {
+    showToast("Nenhum produto encontrado com esses filtros.", "warning");
+    return;
+  }
+
+  const agora = new Date();
+  const titulo = "Relatório de produtos";
+  const logoMarkup = await getReportLogoMarkup();
+  const ths = colKeys.map((key) => `<th>${PRODUTOS_PDF_COL_DEF[key].th}</th>`).join("");
+  const rows = lista
+    .map((p) => {
+      const info = abaixoMinimoMap.get(String(p.id));
+      return `<tr>${colKeys.map((key) => `<td>${produtosPdfCellHtml(key, p, info)}</td>`).join("")}</tr>`;
+    })
+    .join("");
+
+  const conteudo = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+      <head>
+        <meta charset="utf-8" />
+        <title>${titulo}</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #111; padding: 24px; }
+          .report-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+          .report-header img, .report-header object { height: 64px; width: auto; max-width: 120px; }
+          .report-header object { border: none; }
+          .report-header h1 { margin: 0; font-size: 22px; }
+          .meta { margin-bottom: 20px; line-height: 1.55; font-size: 12px; }
+          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+          th, td { border: 1px solid #ccc; padding: 6px 8px; font-size: 11px; text-align: left; vertical-align: top; }
+          th { background: #f0f4f8; font-weight: bold; }
+          .report-footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #ddd; text-align: center; font-size: 12px; color: #333; font-weight: 600; }
+        </style>
+      </head>
+      <body>
+        <div class="report-header">
+          ${logoMarkup}
+          <h1>${titulo}</h1>
+        </div>
+        <div class="meta">
+          <strong>Gerado em:</strong> ${agora.toLocaleString("pt-BR")}<br />
+          <strong>Filtros:</strong> ${produtosPdfResumoFiltros(filtros)}<br />
+          <strong>Produtos:</strong> ${lista.length}
+        </div>
+        <table>
+          <thead><tr>${ths}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <footer class="report-footer">Grupo Sabor Paraense</footer>
+      </body>
+    </html>
+  `;
+
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+  document.body.appendChild(iframe);
+
+  let timeoutId = null;
+  const cleanup = () => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+    try {
+      if (iframe.contentWindow) iframe.contentWindow.onafterprint = null;
+    } catch (_) {}
+    if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+  };
+
+  iframe.onload = () => {
+    const win = iframe.contentWindow;
+    if (!win || typeof win.print !== "function") {
+      cleanup();
+      showToast("Seu navegador não suportou a impressão.", "error");
+      return;
+    }
+    win.onafterprint = cleanup;
+    win.focus();
+    try {
+      win.print();
+      produtosClosePdfModal();
+      showToast("Relatório enviado para impressão / PDF.", "success");
+    } catch (_) {
+      cleanup();
+      showToast("Falha ao acionar a impressão.", "error");
+    }
+  };
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!doc) {
+    cleanup();
+    showToast("Não foi possível gerar o relatório.", "error");
+    return;
+  }
+  doc.open();
+  doc.write(conteudo);
+  doc.close();
+
+  timeoutId = setTimeout(() => {
+    if (!document.body.contains(iframe)) return;
+    cleanup();
+  }, 15000);
+}
+
 function renderProdutosDashboard(lista) {
   // Tenta encontrar o elemento novamente se não estiver disponível
   if (!dom.produtosDashboardTable) {
@@ -14770,6 +15041,18 @@ function setupModals() {
     toggleModal(dom.produtosModal, true);
   });
   dom.closeProdutoBtn?.addEventListener("click", () => toggleModal(dom.produtosModal, false));
+
+  document.getElementById("openProdutosPdf")?.addEventListener("click", () => {
+    produtosOpenPdfModal().catch((err) => showToast(err?.message || "Falha ao abrir o relatório.", "error"));
+  });
+  document.getElementById("closeProdutosPdf")?.addEventListener("click", () => produtosClosePdfModal());
+  document.getElementById("produtosPdfCancelar")?.addEventListener("click", () => produtosClosePdfModal());
+  document.getElementById("produtosPdfGerar")?.addEventListener("click", () => {
+    produtosGerarRelatorioPdf().catch((err) => showToast(err?.message || "Falha ao gerar PDF.", "error"));
+  });
+  document.getElementById("produtosPdfModal")?.addEventListener("click", (ev) => {
+    if (ev.target && ev.target.id === "produtosPdfModal") produtosClosePdfModal();
+  });
 
   document.getElementById("closeProdutoVer")?.addEventListener("click", () => closeProdutoVerModal());
   document.getElementById("closeProdutoVerBtn")?.addEventListener("click", () => closeProdutoVerModal());

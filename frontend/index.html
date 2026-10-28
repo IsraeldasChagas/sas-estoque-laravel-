@@ -14,7 +14,7 @@
     <link rel="apple-touch-icon" href="imagens/apple-touch-icon.png" />
     <link rel="icon" type="image/png" href="imagens/icon-192.png" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
-    <link rel="stylesheet" href="style.css?v=20261028082500-usuarios" />
+    <link rel="stylesheet" href="style.css?v=20261028084500-produtos-pdf" />
     <script>
       (function () {
         try {
@@ -1564,6 +1564,7 @@
             <div class="caixa-page-wrap">
             <div class="actions">
               <button class="btn primary" id="openProduto">+ Novo produto</button>
+              <button type="button" class="btn neutral" id="openProdutosPdf">Relatório PDF</button>
               <form class="produto-search-form" role="search" autocomplete="off" onsubmit="return false;">
                 <input
                   type="text"
@@ -5908,6 +5909,75 @@
       </div>
     </div>
 
+    <div class="modal-backdrop" id="produtosPdfModal" role="presentation">
+      <div class="modal produtos-pdf-modal" role="dialog" aria-modal="true" aria-labelledby="produtosPdfModalTitulo">
+        <header>
+          <h2 id="produtosPdfModalTitulo">Relatório PDF — Produtos</h2>
+          <button type="button" class="close-btn" id="closeProdutosPdf" aria-label="Fechar">×</button>
+        </header>
+        <div class="produtos-pdf-modal__body">
+          <p class="produtos-pdf-secao-titulo">Filtros</p>
+          <div class="produtos-pdf-filtros">
+            <label>
+              Nome ou código
+              <input type="text" id="produtosPdfBusca" placeholder="Todos" autocomplete="off" />
+            </label>
+            <label>
+              Categoria
+              <select id="produtosPdfCategoria">
+                <option value="">Todas</option>
+              </select>
+            </label>
+            <label>
+              Unidade
+              <select id="produtosPdfUnidade">
+                <option value="">Todas</option>
+              </select>
+            </label>
+            <label>
+              Status
+              <select id="produtosPdfStatus">
+                <option value="">Todos</option>
+                <option value="ativo" selected>Ativos</option>
+                <option value="inativo">Inativos</option>
+              </select>
+            </label>
+            <label>
+              Fiscal
+              <select id="produtosPdfFiscal">
+                <option value="">Todos</option>
+                <option value="completo">Fiscal completo</option>
+                <option value="incompleto">Fiscal incompleto</option>
+                <option value="pendente">Fiscal pendente</option>
+              </select>
+            </label>
+            <label class="produtos-pdf-check">
+              <input type="checkbox" id="produtosPdfAbaixoMinimo" />
+              Só abaixo do estoque mínimo
+            </label>
+          </div>
+          <p class="produtos-pdf-secao-titulo">Informações no relatório</p>
+          <div class="produtos-pdf-campos" id="produtosPdfCampos">
+            <label><input type="checkbox" data-prod-pdf-col="codigo" checked /> Código interno</label>
+            <label><input type="checkbox" data-prod-pdf-col="nome" checked /> Nome</label>
+            <label><input type="checkbox" data-prod-pdf-col="categoria" checked /> Categoria</label>
+            <label><input type="checkbox" data-prod-pdf-col="unidade_base" checked /> Unidade de medida</label>
+            <label><input type="checkbox" data-prod-pdf-col="unidade" checked /> Unidade</label>
+            <label><input type="checkbox" data-prod-pdf-col="custo_medio" checked /> Custo médio</label>
+            <label><input type="checkbox" data-prod-pdf-col="estoque_minimo" checked /> Estoque mínimo</label>
+            <label><input type="checkbox" data-prod-pdf-col="estoque_atual" /> Estoque atual (abaixo do mínimo)</label>
+            <label><input type="checkbox" data-prod-pdf-col="tipo_fiscal" /> Tipo fiscal</label>
+            <label><input type="checkbox" data-prod-pdf-col="fiscal" /> Status fiscal</label>
+            <label><input type="checkbox" data-prod-pdf-col="status" checked /> Status</label>
+          </div>
+        </div>
+        <footer>
+          <button type="button" class="btn neutral" id="produtosPdfCancelar">Cancelar</button>
+          <button type="button" class="btn primary" id="produtosPdfGerar">Gerar PDF</button>
+        </footer>
+      </div>
+    </div>
+
     <div class="modal-backdrop" id="despFixasVerModal" role="presentation">
       <div class="modal modal-ver-leitura desp-fixas-ver-modal" role="dialog" aria-modal="true" aria-labelledby="despFixasVerModalTitulo">
         <header>
@@ -7915,7 +7985,7 @@
         } catch (e) {}
       })();
     </script>
-    <script defer src="app.js?v=20261028082500-usuarios"></script>
+    <script defer src="app.js?v=20261028084500-produtos-pdf"></script>
     <script defer src="fiscal-pacote-contador.js?v=20260728-cfg-ui2"></script>
     <script defer src="fiscal-emissao-config.js?v=20260813-ciclo-nfce"></script>
     <script defer src="fiscal-cadastro.js?v=20260813-nfe-transf"></script>
